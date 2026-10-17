@@ -6,6 +6,13 @@
 
 [打开公网试玩版](https://mtmt0111.github.io/unfinished-office-play/)。这是面向玩家的静态版本，包含样例、浏览器支持的本地材料选择、手动整理和完整游戏。要用本机 GitHub 登录态读取仓库或调用 API，请运行下面的完整版本。
 
+## 游戏画面
+
+<p align="center"><img src="screenshots/journey-item-response.png" width="49%" alt="雨后小径中，伙伴回应本关的项目内容"><img src="screenshots/journey-workshop.png" width="49%" alt="回声工坊中的双箱和点灯机关"></p>
+<p align="center"><img src="screenshots/journey-personal-memory.png" width="49%" alt="夜间事务所里的样例回忆页"><img src="screenshots/journey-farewell.png" width="49%" alt="末班站台的行李与告别入口"></p>
+
+截图使用内置天气 App 样例；回忆页里的个人补记是演示输入，不代表真实仓库提交或项目经历。
+
 ## 在电脑运行完整版本
 
 需要 Node.js 24。若要导入 GitHub 仓库，还需安装 GitHub CLI 并登录。首次运行时，在项目目录打开 PowerShell：

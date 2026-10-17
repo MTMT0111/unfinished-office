@@ -3,10 +3,13 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {levels,solve,move,won} from '../src/game.ts';
+import {confirmIdentity,example} from '../src/input.ts';
+import {keepsakeTopic} from '../src/memory.ts';
 const require=createRequire(import.meta.url),{chromium}=require(process.env.PLAYWRIGHT_PATH||'C:/Users/86137/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const out=path.resolve(import.meta.dirname,'../verification');fs.mkdirSync(path.join(out,'browser-temp'),{recursive:true});process.env.TEMP=path.join(out,'browser-temp');process.env.TMP=process.env.TEMP;
 const browser=await chromium.launch({executablePath:process.env.EDGE_PATH||'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true});
 const page=await browser.newPage({viewport:{width:1280,height:960},acceptDownloads:true});
+const weather=example('weather'),confirmedWeather=confirmIdentity(weather,Object.fromEntries(Object.entries(weather.facts).map(([key,value])=>[key,value.value])),weather.prop,weather.palette,weather.accessory);
 const errors=[],external=[],checks=[];page.on('pageerror',e=>{errors.push(e.message);console.error(e.message);});
 page.on('request',r=>{if(/^https?:/.test(r.url())&&!r.url().startsWith('http://127.0.0.1:4188'))external.push(r.url());});
 await page.addInitScript(()=>{
@@ -33,7 +36,15 @@ try{
     assert.equal(await page.locator('#app').getAttribute('data-level'),String(i));
     if(i===1){await page.locator('#hint').click();await page.locator('#game-status').filter({hasText:'下一步'}).waitFor();await shot('journey-river');}
     if(i>=2)await shot('journey-'+levels[i].theme);
-    await route(detours[i]);assert((await board()).found,'旅途物件可实际到达');
+    for(const action of detours[i]){
+      const found=(await board()).found;await act(action);const current=await board();
+      if(current.found&&!found){
+        const message=await page.locator('#clear-panel').isVisible()?page.locator('#clear-memory'):page.locator('#game-status');
+        assert((await message.innerText()).includes(keepsakeTopic(confirmedWeather,i).text),'拾取回应必须引用本关物件的项目线索');
+        if(i===0)await page.screenshot({path:path.join(out,'journey-item-response.png')});
+      }
+    }
+    assert((await board()).found,'旅途物件可实际到达');
     const start=await board(),solution=await solve(levels[i],start);assert(solution);let expected=start;
     for(const action of solution){
       expected=action==='switch'?{...expected,active:expected.active==='you'?'ghost':'you'}:move(levels[i],expected,action);

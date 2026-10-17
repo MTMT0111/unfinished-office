@@ -99,7 +99,7 @@ function refreshGame(){
   el('clear-panel').hidden=state!=='cleared';
   el('clear-title').textContent=memory?'这次更新，带回来了。':levelIndex===5?'这页已有去处。':levelIndex===levels.length-1?'一起到站了。':'这一段，走完了。';
   el('next-level').textContent='翻开回忆 →';
-  el('clear-memory').textContent=memory?`伙伴：${memory.date}，我们完成了「${memory.subject}」。`:choice==='shelf'?'伙伴：这页先留在书架。':choice==='carry'?'伙伴：这页留给下一站。':levelIndex===6?'伙伴：最后一件行李收好了。去站台吧。':board.found?keepsakes[levelIndex].caption:'留一格空白，也可以继续走';
+  el('clear-memory').textContent=board.found?`伙伴：我会记得「${keepsakeTopic(identity,levelIndex).text}」。`:memory?`伙伴：${memory.date}，我们完成了「${memory.subject}」。`:choice==='shelf'?'伙伴：这页先留在书架。':choice==='carry'?'伙伴：这页留给下一站。':levelIndex===6?'伙伴：最后一件行李收好了。去站台吧。':'留一格空白，也可以继续走';
   el('app').dataset.level=String(levelIndex);el('app').dataset.board=JSON.stringify(board);el('app').dataset.mode=playMode;
   el('app').dataset.active=board.active;
   el('app').dataset.memories=String(journey.memories.length+(board.found&&!journey.memories.includes(levelIndex)?1:0));
@@ -419,12 +419,14 @@ function takeMove(direction:Direction,requestedActor:Actor=board.active){
   const next=move(levels[levelIndex],board,direction);hintPoint=undefined;
   if(!next){motion={from:board,at:elapsed,bump:directions[direction]};sound.blocked();el('game-status').textContent=actor==='ghost'?'幽灵能过水，箱子交给你。':'这里走不通 · Z 撤销';refreshGame();draw();return;}
   history.push(from);future=[];motion={from:board,at:elapsed-(reduced.checked?.16:0)};
-  if(next.found&&!board.found){pickupAt=elapsed;sound.found();el('game-status').textContent='伙伴：这页回忆，我想带上。';}
+  const foundTopic=next.found&&!board.found?keepsakeTopic(identity,levelIndex).text:undefined;
+  if(foundTopic!==undefined){pickupAt=elapsed;sound.found();}
   else{const pushed=!next.boxes.every((p,i)=>same(p,board.boxes[i]));sound.step(pushed);el('game-status').textContent=pushed&&corneredBoxes(levels[levelIndex],next).length?'箱子进了墙角 · 可以撤销这一步':'';}
   const lit=next.lit.filter(p=>!board.lit.some(l=>same(p,l)));
   if(lit.length){const lamps=positions(levels[levelIndex],'a'),item=parcelContents(identity,levelIndex,lamps.length,journey.resolution==='carry')[lamps.findIndex(p=>same(p,lit[0]))];sound.found();el('game-status').textContent=item.source==='未说明'?`伙伴：点亮了 ${next.lit.length} / ${lamps.length} 盏灯。`:`伙伴：${item.text}，亮起来了。`;}
   const packed=next.boxes.flatMap((p,i)=>!same(p,board.boxes[i])&&['t','r'].includes(tile(levels[levelIndex],p))?[{p,i}]:[]);
   if(packed.length){const item=parcelContents(identity,levelIndex,next.boxes.length,journey.resolution==='carry')[packed[0].i],target=tile(levels[levelIndex],packed[0].p);el('game-status').textContent=levelIndex===5?target==='r'?'伙伴：这一页，留给下一站。':'伙伴：这一页，就收在这里。':item.source==='未说明'?'伙伴：行李收好了。':`伙伴：${item.text}，收好了。`;sound.found();}
+  if(foundTopic!==undefined)el('game-status').textContent=`伙伴：我记下了「${foundTopic}」。`;
   if(!reduced.checked)pulses.push(...lit.map(point=>({point,at:elapsed,kind:'light' as const})),...packed.map(({p})=>({point:p,at:elapsed+.16,kind:'packed' as const})));
   board=next;
   if(won(levels[levelIndex],board)){queued=[];sound.win();setState('cleared');el('next-level').focus({preventScroll:true});}
