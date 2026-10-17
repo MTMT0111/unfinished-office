@@ -26,9 +26,9 @@ async function act(action){await page.keyboard.press(keys[action]);await page.wa
 async function route(actions){for(const action of actions)await act(action);}
 async function download(name){const event=page.waitForEvent('download');await page.locator('#download').click();const file=await event;await file.saveAs(path.join(out,name+'.png'));return file;}
 try{
-  await page.goto(process.env.APP_URL||'http://127.0.0.1:4188/');assert.equal(await state(),'opening');assert.equal(await page.evaluate(()=>window.__audio.contexts),0);await page.waitForTimeout(650);await shot('journey-opening');await page.locator('#skip-opening').click();assert.equal(await state(),'input');await shot('journey-home');
+  await page.goto(process.env.APP_URL||'http://127.0.0.1:4188/');assert.equal(await state(),'opening');assert.equal(await page.locator('.cover-route li').first().getAttribute('data-progress'),'current');assert.equal(await page.evaluate(()=>window.__audio.contexts),0);await page.waitForTimeout(650);await shot('journey-opening');await page.locator('#skip-opening').click();assert.equal(await state(),'input');await shot('journey-home');
   await page.locator('#sample-weather').click();assert.equal(await state(),'confirm');assert.equal(await page.locator('#edit-facts').evaluate(e=>e.open),false);assert((await page.locator('#confirm-keywords').innerText()).includes('静态天气卡片'));await shot('journey-dossier');
-  await page.locator('#start').click();assert.equal(await state(),'opening');await page.waitForFunction(()=>document.getElementById('opening-line').textContent?.includes('没有 Git 提交记录'));await page.locator('#skip-opening').click();assert.equal(await state(),'playing');await shot('journey-forest');
+  await page.locator('#start').click();assert.equal(await state(),'opening');await page.waitForFunction(()=>document.getElementById('opening-line').textContent?.includes('没有 Git 提交记录'));await page.locator('#skip-opening').click();assert.equal(await state(),'playing');assert.equal(await page.locator('.cover-route li').first().getAttribute('data-progress'),'current');await shot('journey-forest');
   await act('up');const moved=await board();assert.equal(moved.you.y,2);await page.keyboard.press('z');assert.equal((await board()).you.y,3);
   await page.locator('#pause').click();const frozen=await page.locator('#stage').evaluate(c=>c.toDataURL());await page.waitForTimeout(260);assert.equal(await page.locator('#stage').evaluate(c=>c.toDataURL()),frozen);assert.equal(await page.evaluate(()=>window.__audio.live.size),0);await page.locator('#resume-game').click();
   const detours=[['up','up','right','right','right','right'],['switch','right','right','up','up','up'],['up','right','right','up'],['up','right','right'],['down','right','right','up','up'],['up','up','right','right'],['up','up','right','right']];
@@ -51,7 +51,7 @@ try{
       await act(action);assert.deepEqual(await board(),expected,`关卡 ${i} 动作 ${action}`);
     }
     assert(won(levels[i],await board()));await waitState('cleared');await page.waitForTimeout(750);await shot('journey-clear-'+i);await page.locator('#next-level').click();await waitState('memory');await page.waitForTimeout(1300);
-    assert(await page.locator('#memory-title').innerText());
+    assert(await page.locator('#memory-title').innerText());assert.equal(await page.locator('.cover-route li').nth(i).getAttribute('data-progress'),'complete');
     if(i===0){
       assert((await page.locator('#memory-text').innerText()).includes('输入城市'));
       await page.locator('#memory-write summary').click();await page.locator('#memory-note').fill('记得那晚，第一张天气卡片终于显示出来。');await page.locator('#save-memory').click();
@@ -62,7 +62,7 @@ try{
     if(i===2)assert.equal(await page.locator('#memory-source').innerText(),'留给你来写');
     await shot('journey-memory-'+i);await page.locator('#memory-continue').click();await page.waitForTimeout(400);
   }
-  await waitState('waiting');await shot('journey-farewell');await page.locator('#lamp').click();await waitState('done');await ready();
+  await waitState('waiting');assert.deepEqual(await page.locator('.cover-route li').evaluateAll(stops=>stops.map(stop=>stop.dataset.progress)),Array(7).fill('complete'));const desktopBag=await page.locator('#bag-items button').evaluateAll(buttons=>buttons.map(button=>button.getBoundingClientRect().y));assert.equal(desktopBag.length,7);assert(desktopBag.every(y=>y===desktopBag[0]),'七件行李应在同一行');await shot('journey-farewell');const stageBounds=await page.locator('#stage').boundingBox();await page.mouse.click(stageBounds.x+stageBounds.width*256/384,stageBounds.y+stageBounds.height*149/240);assert(await page.locator('#station-story').isVisible());assert((await page.locator('#station-story-topic').innerText()).includes(keepsakeTopic(confirmedWeather,0).text));await page.locator('#station-open-diary').click();await waitState('memory');assert((await page.locator('#memory-text').innerText()).includes('记得那晚'));await page.locator('#memory-continue').click();await waitState('waiting');await page.locator('#lamp').click();await waitState('done');await ready();
   assert((await page.locator('#journey-stats').innerText()).includes('7 / 7 站 · 7 件旅途物件'));await shot('journey-result');
   const file=await download('journey-ticket');assert(file.suggestedFilename().includes('天气 App'));const png=fs.readFileSync(path.join(out,'journey-ticket.png'));assert.equal(png.subarray(0,8).toString('hex'),'89504e470d0a1a0a');assert.equal(png.readUInt32BE(16),1152);
   checks.push('键盘实际走完七站、双箱与机关、收齐七件物件、逐关回忆、关灯与真实 PNG 下载');
@@ -74,7 +74,7 @@ try{
   await page.locator('#new-project').click();await page.locator('#sample-novel').click();await page.locator('#reduced').check();await page.locator('#start').click();assert.equal(await state(),'playing');
   for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});await page.waitForTimeout(100);assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
   await page.setViewportSize({width:390,height:844});await page.locator('[data-move=up]:visible').click();assert.equal((await board()).you.y,2);await page.locator('#switch-character').click();assert.equal((await board()).active,'ghost');await shot('journey-mobile');
-  await page.locator('#skip').click();await page.locator('#lamp').click();await ready();await download('journey-novel-ticket');
+  await page.locator('#skip').click();assert.equal(await page.locator('.cover-route li').last().getAttribute('data-progress'),'current');const mobileBag=await page.locator('#bag-items button').evaluateAll(buttons=>buttons.map(button=>button.getBoundingClientRect().y));assert.equal(mobileBag.length,7);assert(mobileBag.every(y=>y===mobileBag[0]),'手机上七件行李应在同一行');await page.locator('#lamp').click();await ready();await download('journey-novel-ticket');
   checks.push('减少动态仍可完整游玩；手机方向按钮、换人可用；320/390/768/1440 无横向溢出');
   await page.locator('#new-project').click();await page.locator('#source-manual').click();await page.locator('#project-name').fill('<img src=x onerror=alert(1)>');await page.locator('#name-only').check();await page.locator('#arrange').click();await page.locator('#start').click();await page.locator('#skip').click();
   await page.evaluate(()=>{window.__originalBlob=HTMLCanvasElement.prototype.toBlob;HTMLCanvasElement.prototype.toBlob=function(cb){cb(null);};});await page.locator('#lamp').click();await page.locator('#retry-export').waitFor();assert(await page.locator('#download').isDisabled());await page.evaluate(()=>{HTMLCanvasElement.prototype.toBlob=window.__originalBlob;});await page.locator('#retry-export').click();await ready();assert((await page.locator('#result-name').innerText()).includes('<img'));assert.equal(await page.locator('#result-name img').count(),0);

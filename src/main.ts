@@ -11,6 +11,7 @@ import { setupImport } from './import-ui.ts';
 type State = 'input'|'reading'|'confirm'|'opening'|'playing'|'cleared'|'memory'|'paused'|'waiting'|'fading'|'done';
 const el = <T extends HTMLElement=HTMLElement>(id:string) => document.getElementById(id) as T;
 const stage=el<HTMLCanvasElement>('stage'),ctx=stage.getContext('2d');
+const routeStops=[...document.querySelectorAll<HTMLElement>('.cover-route li')];
 const inputName=el<HTMLInputElement>('project-name'),description=el<HTMLTextAreaElement>('description');
 const prop=el<HTMLSelectElement>('prop'),palette=el<HTMLSelectElement>('palette'),accessory=el<HTMLSelectElement>('accessory');
 const reduced=el<HTMLInputElement>('reduced'),includeDate=el<HTMLInputElement>('include-date'),date=el<HTMLInputElement>('memorial-date');
@@ -71,6 +72,12 @@ function addStationRipple(x:number,y:number,kind:StationRipple['kind']='water'){
   draw();animateStationRipples();
 }
 function refreshGame(){
+  const waitingAtStation=journey.skipped&&['waiting','fading','done'].includes(state);
+  routeStops.forEach((stop,index)=>{
+    const complete=journey.visited.includes(index),current=!complete&&(waitingAtStation?index===levels.length-1:index===levelIndex||index===0&&['input','reading','confirm'].includes(state));
+    stop.dataset.progress=complete?'complete':current?'current':'upcoming';
+    stop.setAttribute('aria-current',current?'step':'false');
+  });
   const level=levels[levelIndex];
   const coop=playMode==='together';
   el('solo-controls').hidden=coop;el('coop-controls').hidden=!coop;el<HTMLButtonElement>('hint').hidden=coop;
