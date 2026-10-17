@@ -76,7 +76,7 @@ function refreshGame(){
   el('solo-controls').hidden=coop;el('coop-controls').hidden=!coop;el<HTMLButtonElement>('hint').hidden=coop;
   el('control-help').textContent=coop?'两人同屏：玩家一用 WASD，玩家二用方向键，各自控制一个角色。Z 撤销，Y 重做。也可点角色后点相邻格，或在画面上滑动。你能推箱；幽灵能过水、走过灯芯点灯。金框放箱子，金色脚印给你，绿色脚印给幽灵。两人到齐、灯全亮才过关。书库的书架和行李格任选一个。':'方向键 / WASD 移动，X 换人，Z 撤销，Y 重做。也可点方向按钮、相邻格子，或在画面上滑动。你能推箱；幽灵能过水、走过灯芯点灯。金框放箱子，金色脚印给你，绿色脚印给幽灵。两人到齐、灯全亮才过关。书库的书架和行李格任选一个。';
   const memory=levelIndex<5?identity.milestones?.[levelIndex]:undefined;
-  el('chapter-number').textContent=memory?`${memory.date} · 回看第 ${levelIndex+1} 次更新`:level.subtitle;el('chapter-title').textContent=memory?memory.subject:level.title;
+  el('chapter-number').textContent=memory?`${memory.date} · 日记页 ${String(levelIndex+1).padStart(2,'0')}`:level.subtitle;el('chapter-title').textContent=memory?memory.subject:level.title;
   el('game-objective').textContent=memory?'把这次更新的文件送进金框，再和伙伴一起到出口。':levelIndex===5?'替未完成的一页选个去处，再一起离开。':levelIndex===6?'收好最后一件行李，点亮站灯，再一起到站。':level.hint;
   el('active-character').textContent=board.active==='you'?'你':'项目幽灵';
   el('switch-character').setAttribute('aria-label',`切换为${board.active==='you'?'项目幽灵':'你'}，快捷键 X`);

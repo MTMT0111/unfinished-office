@@ -43,6 +43,7 @@ try{
   const second=page.locator('.dossier-entry').nth(1);await second.locator('summary').first().click();await second.getByRole('button',{name:'解读不准确，只保留原始记录'}).click();
   await page.locator('#confirm-panel').screenshot({path:path.join(out,'diary-fixture-dossier.png')});
   await page.locator('#start').click();
+  assert.equal(await page.locator('#chapter-number').innerText(),'2026-02-03 · 日记页 01');
   for(let i=0;i<levels.length;i++){
     if(i===0)assert((await page.locator('#chapter-title').innerText()).includes('增加城市输入检查'));
     const route=await solve(levels[i],newBoard(levels[i]));
@@ -62,6 +63,7 @@ try{
     if(i===1){assert(text.includes('给天气卡片加上城市名'));assert(text.includes('src/card.ts'));assert(!text.includes('标题使用了 city'));}
     if(i===6)assert(text.includes('再见'));
     await page.locator('#memory-continue').click();
+    if(i===0)assert.equal(await page.locator('#chapter-number').innerText(),'2026-02-03 · 日记页 02');
   }
   assert((await page.locator('#departure-memory').innerText()).includes('增加城市输入检查'));
   await page.locator('#open-settings').click();await page.locator('#settings-reduced').check();await page.getByRole('button',{name:'收好设置'}).click();
