@@ -1,0 +1,28 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url),{chromium}=require(process.env.PLAYWRIGHT_PATH||'C:/Users/86137/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const out=path.resolve(import.meta.dirname,'../verification');process.env.TEMP=path.join(out,'browser-temp');process.env.TMP=process.env.TEMP;
+const browser=await chromium.launch({executablePath:process.env.EDGE_PATH||'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true});
+const page=await browser.newPage({viewport:{width:1200,height:900}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+const board=async()=>JSON.parse(await page.locator('#app').getAttribute('data-board'));
+try{
+  await page.emulateMedia({reducedMotion:'no-preference'});await page.goto(process.env.APP_URL||'http://127.0.0.1:4188/');assert.equal(await page.locator('.cover-route li').count(),7);assert.equal(await page.locator('#app').getAttribute('data-state'),'opening');const openingFrame=await page.locator('#stage').evaluate(c=>c.toDataURL());await page.waitForTimeout(320);assert.notEqual(await page.locator('#stage').evaluate(c=>c.toDataURL()),openingFrame,'打开试玩后应立即播放像素开场');await page.waitForTimeout(1900);await page.setViewportSize({width:390,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:path.join(out,'journey-opening-mobile.png'),fullPage:true});await page.setViewportSize({width:1200,height:900});await page.locator('#skip-opening').click();assert.equal(await page.locator('#app').getAttribute('data-state'),'input');
+  const coverFrame=await page.locator('#stage').evaluate(c=>c.toDataURL());await page.waitForTimeout(360);assert.notEqual(await page.locator('#stage').evaluate(c=>c.toDataURL()),coverFrame,'封面待机时应有轻微像素动效');
+  const reducedPage=await browser.newPage({viewport:{width:390,height:844},reducedMotion:'reduce'});await reducedPage.goto(process.env.APP_URL||'http://127.0.0.1:4188/');assert.equal(await reducedPage.locator('#reduced').isChecked(),true);const still=await reducedPage.locator('#stage').evaluate(c=>c.toDataURL());await reducedPage.waitForTimeout(360);assert.equal(await reducedPage.locator('#stage').evaluate(c=>c.toDataURL()),still,'减少动态时封面应保持静止');await reducedPage.close();
+  const autoPage=await browser.newPage({viewport:{width:900,height:700},reducedMotion:'no-preference'});await autoPage.goto(process.env.APP_URL||'http://127.0.0.1:4188/');await autoPage.waitForFunction(()=>document.getElementById('app').dataset.state==='input',{timeout:15000});await autoPage.close();
+  await page.locator('#open-settings').click();await page.waitForTimeout(100);const pausedCover=await page.locator('#stage').evaluate(c=>c.toDataURL());await page.waitForTimeout(300);assert.equal(await page.locator('#stage').evaluate(c=>c.toDataURL()),pausedCover,'封面设置打开时应暂停背景动画');await page.keyboard.press('Escape');await page.waitForTimeout(360);assert.notEqual(await page.locator('#stage').evaluate(c=>c.toDataURL()),pausedCover,'关闭设置后应恢复封面动画');
+  await page.locator('#sample-weather').click();await page.locator('#start').click();assert.equal(await page.locator('#app').getAttribute('data-state'),'opening');await page.waitForFunction(()=>document.getElementById('opening-line').textContent?.includes('没有 Git 提交记录'));await page.locator('#skip-opening').click();assert.equal(await page.locator('#app').getAttribute('data-state'),'playing');await page.waitForTimeout(230);
+  await page.keyboard.press('ArrowUp');await page.keyboard.press('ArrowRight');await page.waitForTimeout(420);assert.deepEqual((await board()).you,{x:2,y:2});
+  await page.keyboard.press('ArrowUp');await page.keyboard.press('x');await page.waitForTimeout(420);assert.deepEqual((await board()).you,{x:2,y:1});assert.equal((await board()).active,'ghost');
+  await page.keyboard.press('z');await page.waitForTimeout(220);assert.deepEqual((await board()).you,{x:2,y:2});assert.equal((await board()).active,'you');
+  const sampling=page.evaluate(()=>new Promise(resolve=>{const frames=[];let last=0;function tick(now){if(last)frames.push(now-last);last=now;if(frames.length<100)requestAnimationFrame(tick);else resolve(frames);}requestAnimationFrame(tick);}));
+  await page.locator('#hint').click();await page.locator('#game-status').filter({hasText:'下一步'}).waitFor();const frames=await sampling;
+  frames.sort((a,b)=>a-b);assert.equal(frames.length,100);
+  await page.setViewportSize({width:320,height:800});await page.waitForTimeout(100);assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  for(const button of await page.locator('[data-move]:visible').all()){const box=await button.boundingBox();assert(box.width>=44&&box.height>=44);}
+  await page.locator('#pause').click();await page.setViewportSize({width:390,height:844});await page.locator('#stage').screenshot({path:path.join(out,'journey-mobile-paused.png')});
+  assert.deepEqual(errors,[]);const report={browser:await browser.version(),checks:['打开试玩后播放完整开场，可跳过也会进入封面','封面七站路线可见，默认像素场景轻动','系统减少动态时封面保持静止','设置弹窗会暂停封面动效，关闭后恢复','确认项目后播放项目专属开场，可跳过进入第一关','快速连续输入缓存一步','运动中换人等落定，撤销恢复角色与位置','提示搜索期间 RAF 持续运行','320px 无溢出，方向按钮至少 44×44'],frames:{samples:100,medianMs:frames[50],p95Ms:frames[95],maxMs:frames[99]},scope:'本机无头 Edge 样本，不代表真实手机帧率',errors};
+  fs.writeFileSync(path.join(out,'motion-results.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));
+}finally{await browser.close();}

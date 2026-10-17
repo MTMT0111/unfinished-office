@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env*
+verification/browser-temp/
+/verification/
+/打开试玩.html
+*.log

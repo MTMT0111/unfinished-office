@@ -1,0 +1,38 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import {pathToFileURL} from 'node:url';
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+import {levels,newBoard,solve} from '../src/game.ts';
+const require=createRequire(import.meta.url),{chromium}=require(process.env.PLAYWRIGHT_PATH||'C:/Users/86137/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const out=path.resolve(import.meta.dirname,'../verification');process.env.TEMP=path.join(out,'browser-temp');process.env.TMP=process.env.TEMP;
+const browser=await chromium.launch({executablePath:process.env.EDGE_PATH||'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true});
+const page=await browser.newPage({viewport:{width:390,height:844},reducedMotion:'reduce'}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+const state=()=>page.locator('#app').getAttribute('data-state');
+const solution=await solve(levels[0],newBoard(levels[0]));
+async function firstMemory(){for(const action of solution){await page.keyboard.press({up:'ArrowUp',down:'ArrowDown',left:'ArrowLeft',right:'ArrowRight',switch:'x'}[action]);}assert.equal(await state(),'cleared');await page.locator('#next-level').click();assert.equal(await state(),'memory');}
+try{
+  await page.goto(process.env.APP_URL||'http://127.0.0.1:4188/');await page.locator('#sample-novel').click();await page.locator('#start').click();await firstMemory();
+  assert((await page.locator('#memory-text').innerText()).includes('夜班邮差'));await page.locator('#memory-write summary').click();await page.locator('#memory-note').fill('字'.repeat(121));await page.locator('#memory-continue').click();assert.equal(await state(),'memory');assert(await page.locator('#memory-note-error').isVisible());
+  const note='<b>那个写出第一段的晚上</b>';await page.locator('#memory-note').fill(note);await page.locator('#bookmark-memory').click();assert.equal(await page.locator('#bookmark-memory').getAttribute('aria-pressed'),'true');await page.locator('#memory-continue').click();assert.equal(await state(),'playing');
+  const savedBoard=await page.locator('#app').getAttribute('data-board');assert.equal(await page.locator('#bag-items button:enabled').count(),1);assert.equal(await page.locator('#bag-items button').nth(1).getAttribute('aria-current'),'step');assert((await page.locator('#journey-bag').innerText()).includes('去处 · 告别'));
+  await page.locator('#bag-items button').first().click();assert.equal(await state(),'memory');assert((await page.locator('#memory-text').innerText()).includes(note));
+  await page.locator('#pause').click();assert((await page.locator('#stage').getAttribute('aria-label')).includes('夜间事务所'));await page.locator('#resume-game').click();await page.locator('#memory-continue').click();assert.equal(await state(),'playing');assert.equal(await page.locator('#app').getAttribute('data-board'),savedBoard);assert.equal(await page.locator('#app').getAttribute('data-level'),'1');
+  for(const action of await solve(levels[1],newBoard(levels[1]))){await page.keyboard.press({up:'ArrowUp',down:'ArrowDown',left:'ArrowLeft',right:'ArrowRight',switch:'x'}[action]);}
+  assert.equal(await state(),'cleared');const clearedBoard=await page.locator('#app').getAttribute('data-board');await page.locator('#bag-items button').first().click();await page.locator('#memory-continue').click();assert.equal(await state(),'cleared');assert.equal(await page.locator('#app').getAttribute('data-board'),clearedBoard);
+  await page.locator('#skip').click();assert((await page.locator('#departure-memory').innerText()).includes(note));await page.locator('#bag-items button').first().click();await page.locator('#memory-continue').click();assert.equal(await state(),'waiting');
+  await page.locator('#lamp').click();await page.waitForFunction(()=>!document.getElementById('download').disabled);assert.equal(await page.locator('#remembered-title').innerText(),note);assert.equal(await page.locator('#remembered-title b').count(),0);
+  await page.evaluate(()=>{window.__bookImage=HTMLCanvasElement.prototype.toDataURL;HTMLCanvasElement.prototype.toDataURL=()=>{throw new Error('模拟图像失败');};});await page.locator('#save-book').click();assert((await page.locator('#book-status').innerText()).includes('模拟图像失败'));await page.evaluate(()=>{HTMLCanvasElement.prototype.toDataURL=window.__bookImage;});
+  const bookEvent=page.waitForEvent('download');await page.locator('#save-book').click();const file=await bookEvent,bookPath=path.join(out,'journey-memory-book.html');await file.saveAs(bookPath);assert(file.suggestedFilename().endsWith('.html'));
+  const book=await browser.newPage({viewport:{width:390,height:844}}),requests=[];book.on('request',r=>{if(/^https?:/.test(r.url()))requests.push(r.url());});await book.context().setOffline(true);await book.goto(pathToFileURL(bookPath).href);
+  assert((await book.locator('.story').first().innerText()).includes(note));assert.equal(await book.locator('.story b').count(),0);assert.equal(await book.locator('details.memory').count(),2);assert(await book.locator('img').evaluate(e=>e.complete&&e.naturalWidth===768));assert((await book.locator('.bookmark').innerText()).includes(note));assert.equal(await book.locator('.bookmark a').getAttribute('href'),'#memory-0');
+  await book.locator('details').last().locator('summary').click();assert((await book.locator('dl').innerText()).includes('第一至第三章已有初稿'));assert.deepEqual(requests,[]);
+  for(const width of [320,390,768]){await book.setViewportSize({width,height:844});assert(await book.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
+  await book.setViewportSize({width:390,height:844});await book.screenshot({path:path.join(out,'journey-memory-book-mobile.png'),fullPage:true});await book.close();
+  await page.locator('#album-section summary').click();await page.locator('#memory-album button').first().click();assert((await page.locator('#memory-text').innerText()).includes(note));assert.equal(await page.locator('#memory-text b').count(),0);
+  for(const width of [320,390,768]){await page.setViewportSize({width,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
+  await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(out,'journey-memory-mobile.png'),fullPage:true});
+  await page.locator('#memory-continue').click();await page.locator('#replay').click();await firstMemory();assert((await page.locator('#memory-text').innerText()).includes(note));
+  await page.locator('#memory-write summary').click();await page.locator('#memory-note').fill('');await page.locator('#save-memory').click();assert((await page.locator('#memory-text').innerText()).includes('夜班邮差'));
+  assert.deepEqual(errors,[]);const report={checks:['无须收集也能解锁过关回忆','超过 120 字留在当前页提示','继续走自动保存草稿','回忆文字不执行 HTML','途中翻行李、暂停回忆后恢复原关卡与棋盘','站台翻行李后可正常关灯','回忆册实际下载；离线打开、插画完整、无外部请求','离线回忆册同时保留项目资料与个人留言、仅含已走的回忆','手机回忆页与导出册 320/390/768 不溢出','重玩保留个人回忆；清空后恢复项目资料'],errors};fs.writeFileSync(path.join(out,'memory-results.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));
+}catch(e){await page.screenshot({path:path.join(out,'memory-failure.png'),fullPage:true});throw e;}finally{await browser.close();}
