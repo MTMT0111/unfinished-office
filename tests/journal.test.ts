@@ -5,6 +5,7 @@ import {parseAnalysis,validateProject} from '../src/analysis.ts';
 import {example} from '../src/input.ts';
 import {chapterCargo,keepsakeStory,keepsakeTopic,memoryStory,memoryBookHtml,parcelContents,rememberedPage,farewellLines} from '../src/memory.ts';
 import {newJourney} from '../src/game.ts';
+import {recalledKeepsake} from '../src/scene.ts';
 
 const sha='a'.repeat(40),other='b'.repeat(40);
 const commit={sha,commit:{message:'增加城市输入检查\n\nCo-authored-by: Lin <private@example.com>',author:{name:'Wen'},committer:{date:'2026-02-03T08:00:00Z'}},files:[{filename:'src/city.ts',status:'modified',patch:'-return search(city);\n+if (!city.trim()) return showHint("请输入城市");\n+return search(city);'},{filename:'.env',patch:'SECRET'},{filename:'src/key.ts',patch:'api_key="sk-synthetic1234567890"'}]};
@@ -22,8 +23,9 @@ test('书签只保留已走过且有内容的回忆，不能自动替玩家选�
 });
 test('告别回应书签和未完成事项，不把未翻过的提交说成经历或提前宣称已经关灯',()=>{
   const identity=example('weather');identity.regret='还没试用';identity.milestones=normalizeMilestones([commit,{...commit,sha:other,commit:{...commit.commit,message:'还未翻到的更新'}}]);
-  const journey={...newJourney(),visited:[0],bookmark:0,resolution:'carry' as const,skipped:true};
-  const words=farewellLines(identity,journey);assert(words.memory.includes('增加城市输入检查'));assert(words.choice.includes('还没试用'));assert(words.signal.includes(identity.facts.name.value));assert(words.closing.includes('今天先到这里'));
+  const journey={...newJourney(),visited:[0],memories:[0,3],bookmark:0,resolution:'carry' as const,skipped:true};
+  const words=farewellLines(identity,journey);assert(words.memory.includes('增加城市输入检查'));assert(words.choice.includes('还没试用'));assert(words.luggage.includes('2 件旅途物件'));assert(words.signal.includes(identity.facts.name.value));assert(words.closing.includes('今天先到这里'));
+  assert.equal(recalledKeepsake(journey.memories,.079),undefined);assert.equal(recalledKeepsake(journey.memories,.08),0);assert.equal(recalledKeepsake(journey.memories,.13),3);assert.equal(recalledKeepsake(journey.memories,.18),undefined);
   const story=memoryStory(identity,6,journey);assert(!story.lines.join('').includes('还未翻到的更新'));assert(!story.lines.join('').includes('关上事务所的灯'));assert(story.lines.at(-1)?.includes('等你亲手关灯'));
 });
 test('提交保留真实日期、作者和共同署名，限制改动片段并剔除凭据',()=>{

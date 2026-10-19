@@ -528,7 +528,7 @@ function lightsOut(){
   if(reduced.checked){finish();return;}
   function fade(now:number){
     if(state!=='fading')return;dark=Math.min(1,(now-began)/4200);
-    const line=dark<.18&&rememberedPage(identity,journey)?'这一页，交给你。':dark<.48?words.signal:dark<.78?'谢谢你陪我走到这里。':words.closing;
+    const line=dark<.18&&rememberedPage(identity,journey)?'这一页，交给你。':dark<.40?words.luggage:dark<.62?words.signal:dark<.82?'谢谢你陪我走到这里。':words.closing;
     if(el('departure-voice').textContent!==line)el('departure-voice').textContent=line;
     draw();if(dark>=1)finish();else raf=requestAnimationFrame(fade);
   }

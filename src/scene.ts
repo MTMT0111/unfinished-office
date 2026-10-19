@@ -4,6 +4,10 @@ import { keepsakeTopic } from './memory.ts';
 
 export const WIDTH=384,HEIGHT=240,CELL=24,OX=84,OY=35;
 export const ease=(v:number)=>{const t=Math.max(0,Math.min(1,v));return t*t*(3-2*t);};
+export function recalledKeepsake(items:number[],departure:number):number|undefined{
+  const step=Math.floor((departure-.08)/.045);
+  return step>=0&&step<items.length?items[step]:undefined;
+}
 export type Motion={from:Board; at:number; bump?:Point};
 export type Pulse={point:Point;at:number;kind:'light'|'packed'};
 export type StationRipple={x:number;y:number;at:number;kind:'water'|'memory'};
@@ -104,7 +108,7 @@ export function drawKeepsake(c:CanvasRenderingContext2D,index:number,x:number,y:
   if(index===6){r(-7,-5,14,10,colors.gold);r(-7,-1,2,2,colors.ink);r(5,-1,2,2,colors.ink);r(1,-4,1,8,'#b58c75');r(-4,-2,3,1,'#8b7164');r(-4,1,3,1,'#8b7164');}
   c.restore();
 }
-function travelCase(c:CanvasRenderingContext2D,items:number[],x:number,y:number,id:Identity,selected?:number){
+function travelCase(c:CanvasRenderingContext2D,items:number[],x:number,y:number,id:Identity,selected?:number,recalled?:number){
   rect(c,x+21,y-7,16,3,'#d3aa83');rect(c,x+20,y-4,3,4,'#d3aa83');rect(c,x+34,y-4,3,4,'#d3aa83');
   rect(c,x-2,y,61,41,'#483e4a');rect(c,x,y,57,38,'#ae816b');rect(c,x+2,y+2,53,34,'#594b54');
   for(let i=0;i<7;i++){
@@ -112,6 +116,7 @@ function travelCase(c:CanvasRenderingContext2D,items:number[],x:number,y:number,
     rect(c,px-5.5,py-7,12,14,'#66545b');
     if(items.includes(i))drawKeepsake(c,i,px,py,.72,keepsakeTopic(id,i).text);else rect(c,px-2,py,4,1,'#998075');
     if(selected===i){c.strokeStyle=colors.gold;c.lineWidth=1;c.strokeRect(Math.round(px-6),Math.round(py-7),12,14);}
+    if(recalled===i){c.strokeStyle=colors.cream;c.lineWidth=1;c.strokeRect(Math.round(px-6),Math.round(py-7),12,14);star(c,px+5,py-7,colors.mint,.55);}
   }
 }
 function prop(c:CanvasRenderingContext2D,id:Identity,x:number,y:number){
@@ -278,7 +283,7 @@ export function drawFarewell(c:CanvasRenderingContext2D,id:Identity,time:number,
   c.fillStyle=colors.cream;c.font='8px "Microsoft YaHei",sans-serif';c.fillText('夜 间 站 台',84,110);
   rect(c,159,148,80,6,'#ac7f70');rect(c,161,133,76,4,'#9b746e');rect(c,164,154,4,14,'#68545f');rect(c,229,154,4,14,'#68545f');
   const approach=ease((departure-.22)/.36),boarding=ease((departure-.54)/.24),ghostX=215+48*approach+88*boarding,ghostY=140-12*approach+12*boarding-12*Math.sin(boarding*Math.PI),ghostAlpha=1-ease((departure-.72)/.08);
-  const signoff=ease((departure-.18)/.10)*(1-ease((departure-.50)/.12));
+  const signoff=ease((departure-.38)/.08)*(1-ease((departure-.60)/.08));
   person(c,id,'you',182,142,time,0,false,departure>.54);
   if(signoff){
     c.save();c.globalAlpha=signoff;
@@ -290,7 +295,8 @@ export function drawFarewell(c:CanvasRenderingContext2D,id:Identity,time:number,
     const handover=ease(departure/.22),bookX=209-18*handover,bookY=139-5*Math.sin(handover*Math.PI);
     rect(c,bookX-7,bookY-5,13,10,'#6f98ad');rect(c,bookX-5,bookY-4,9,7,'#e1e7df');rect(c,bookX-6,bookY-5,2,10,'#476279');rect(c,bookX+1,bookY-5,2,8,'#edc68b');
   }
-  travelCase(c,journey?.memories??[],248,139,id,selected);
+  const memories=journey?.memories??[];
+  travelCase(c,memories,248,139,id,selected,recalledKeepsake(memories,departure));
   if(journey?.resolution==='carry'){rect(c,250,127,16,12,'#927c68');drawKeepsake(c,5,258,130,1,keepsakeTopic(id,5).text);}
   if(departure>.2&&departure<.76){for(let i=1;i<=3;i++)rect(c,ghostX-i*7,ghostY-12+(i%2)*5,2,2,i%2?colors.gold:colors.mint);}
   rect(c,277,85,2,34,'#bf9d7a');rect(c,272,114,12,4,'#f2d59a');rect(c,275,118,6,3,'#ffeac0');
