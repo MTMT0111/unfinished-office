@@ -25,9 +25,9 @@ try{
   await page.keyboard.press('z');await page.keyboard.press('ArrowRight');assert(await page.locator('#redo').isDisabled());await page.locator('#restart-level').click();assert.equal(await board(),initial);
   await page.locator('#pause').click();await page.locator('#open-settings').click();await page.locator('#game-settings .primary').click();assert.equal(await state(),'paused');await page.locator('#resume-game').click();
   for(let i=0;i<levels.length;i++){
-    const level=i===5?{...levels[i],map:levels[i].map.map(row=>row.replace('r','.'))}:levels[i];
+    const level=i===5?{...levels[i],map:levels[i].map.map(row=>row.replace('t','.'))}:levels[i];
     if(i===2){assert((await page.locator('#parcel-list').innerText()).includes('静态天气卡片'));assert.equal(await page.locator('#parcel-list button').count(),2);await shot('journey-greenhouse-lamps');}
-    if(i===3)assert((await page.locator('#parcel-list').innerText()).includes('实时天气接口'));
+    if(i===3)assert((await page.locator('#parcel-list').innerText()).includes('静态天气卡片'));
     if(i===5||i===6){assert((await page.locator('#parcel-list').innerText()).includes(regret));assert.equal(await page.locator('#parcel-list b').count(),0);if(i===5)await shot('journey-library-choice');}
     const route=await solve(level,newBoard(levels[i]));assert(route);let checkedLight=false;
     for(const action of route){

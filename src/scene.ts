@@ -278,7 +278,13 @@ export function drawFarewell(c:CanvasRenderingContext2D,id:Identity,time:number,
   c.fillStyle=colors.cream;c.font='8px "Microsoft YaHei",sans-serif';c.fillText('夜 间 站 台',84,110);
   rect(c,159,148,80,6,'#ac7f70');rect(c,161,133,76,4,'#9b746e');rect(c,164,154,4,14,'#68545f');rect(c,229,154,4,14,'#68545f');
   const approach=ease((departure-.22)/.36),boarding=ease((departure-.54)/.24),ghostX=215+48*approach+88*boarding,ghostY=140-12*approach+12*boarding-12*Math.sin(boarding*Math.PI),ghostAlpha=1-ease((departure-.72)/.08);
+  const signoff=ease((departure-.18)/.10)*(1-ease((departure-.50)/.12));
   person(c,id,'you',182,142,time,0,false,departure>.54);
+  if(signoff){
+    c.save();c.globalAlpha=signoff;
+    for(let i=0;i<6;i++){const angle=i*Math.PI/3+time*2,radius=9+Math.sin(time*5+i)*2;rect(c,ghostX+12+Math.cos(angle)*radius,ghostY-1+Math.sin(angle)*radius,2,2,i%2?colors.gold:colors.mint);}
+    c.restore();
+  }
   c.save();c.globalAlpha=ghostAlpha;person(c,id,'ghost',ghostX,ghostY,time+departure*8,boarding,false,false);c.restore();
   if(journey?.bookmark!==undefined&&journey.visited.includes(journey.bookmark)){
     const handover=ease(departure/.22),bookX=209-18*handover,bookY=139-5*Math.sin(handover*Math.PI);

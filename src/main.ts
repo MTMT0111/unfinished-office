@@ -357,8 +357,8 @@ el('memory-continue').addEventListener('click',()=>{
   if(state!=='memory'||!saveMemoryNote())return;
   if(memoryReturn){
     const backTo=memoryReturn;memoryReturn=null;
-    if(backTo==='done'){stopClock();sound.stop();setState('done');renderAlbum();draw();if(!previewUrl||download.disabled)void generatePreview();el('result-panel').scrollIntoView({block:'start',behavior:'instant'});el('album-section').focus({preventScroll:true});}
-    else if(backTo==='waiting')waiting();
+    if(backTo==='done'){stopClock();sound.stop();setState('done');renderAlbum();if(stationStoryIndex!==undefined)showStationStory(stationStoryIndex,false);draw();if(!previewUrl||download.disabled)void generatePreview();el('result-panel').scrollIntoView({block:'start',behavior:'instant'});el('album-section').focus({preventScroll:true});}
+    else if(backTo==='waiting'){waiting();if(stationStoryIndex!==undefined)showStationStory(stationStoryIndex,false);}
     else{setState(backTo);draw();stage.focus({preventScroll:true});}
     return;
   }
@@ -397,13 +397,13 @@ function renderAlbum(){
   for(const i of journey.visited){const button=document.createElement('button');button.type='button';button.textContent=`${journey.bookmark===i?'▰ ':''}${String(i+1).padStart(2,'0')}  ${memoryStory(identity,i,journey).title}${journey.notes[i]?' · 有你的留言':''}`;button.addEventListener('click',()=>openMemory(i,'done'));album.append(button);}
 }
 el('reopen-bookmark').addEventListener('click',()=>{const page=rememberedPage(identity,journey);if(state==='done'&&page)openMemory(page.index,'done');});
-function showStationStory(index:number){
+function showStationStory(index:number,ripple=true){
   const story=keepsakeStory(identity,index,journey);stationStoryIndex=index;
   el('station-story-topic').textContent=story.topic.keyword?`项目关键词 · ${story.topic.text}`:`旅途线索 · ${story.topic.text}`;
   el('station-story-title').textContent=story.title;
   el('station-story-lines').replaceChildren(...story.lines.map(line=>{const p=document.createElement('p');p.textContent=line;return p;}));
   el('station-story-source').textContent=story.source;el('station-story').hidden=false;
-  refreshGame();addStationRipple(248+8+(index%4)*13.5,139+10+Math.floor(index/4)*16,'memory');
+  refreshGame();if(ripple)addStationRipple(248+8+(index%4)*13.5,139+10+Math.floor(index/4)*16,'memory');
 }
 el('station-open-diary').addEventListener('click',()=>{
   if(stationStoryIndex!==undefined&&['waiting','done'].includes(state))openMemory(stationStoryIndex,state as 'waiting'|'done');
@@ -524,11 +524,11 @@ async function generatePreview(){
 function finish(){stopClock();dark=1;sound.stop();setState('done');draw();renderDossier(el('result-keywords'),identity);renderAlbum();el('result-name').textContent=identity.facts.name.value;el('journey-stats').textContent=`${journey.visited.length} / ${levels.length} 站 · ${journey.memories.length} 件旅途物件${journey.skipped?' · 提前到站':''}`;el('ending-choice').hidden=!journey.resolution;el('ending-choice').textContent=journey.resolution?resolutionText[journey.resolution]:'';void generatePreview();el('result-panel').scrollIntoView({block:'start',behavior:'instant'});el('replay').focus({preventScroll:true});}
 function lightsOut(){
   if(state!=='waiting')return;
-  stopClock();setState('fading');sound.stop();sound.lamp();const began=performance.now(),closing=farewellLines(identity,journey).closing;
+  stopClock();setState('fading');sound.stop();sound.lamp();const began=performance.now(),words=farewellLines(identity,journey);
   if(reduced.checked){finish();return;}
   function fade(now:number){
     if(state!=='fading')return;dark=Math.min(1,(now-began)/4200);
-    const line=dark<.22&&rememberedPage(identity,journey)?'这一页，交给你。':dark<.78?'谢谢你陪我走到这里。':closing;
+    const line=dark<.18&&rememberedPage(identity,journey)?'这一页，交给你。':dark<.48?words.signal:dark<.78?'谢谢你陪我走到这里。':words.closing;
     if(el('departure-voice').textContent!==line)el('departure-voice').textContent=line;
     draw();if(dark>=1)finish();else raf=requestAnimationFrame(fade);
   }

@@ -1,6 +1,6 @@
 # 烂尾事务所 · 再走一小段
 
-一个关于和项目好好告别的像素推箱游戏。带上项目资料出发，走过七站：有 GitHub 提交时，前五站会把实际更新变成日记线索；第六站由你决定未完成事项留档还是带走；第七站与项目伙伴告别。没有提交记录时不会编造项目经历。
+一个关于和项目好好告别的像素推箱游戏。带上项目资料出发，走过七站：有 GitHub 提交时，前五站会把实际更新变成日记线索；第六站由你决定未完成事项留档还是带走；第七站与项目伙伴告别，它会让随项目类型变化的道具最后亮一次再登车。没有提交记录时不会编造项目经历。
 
 ## 先试玩
 
@@ -9,7 +9,7 @@
 ## 游戏画面
 
 <p align="center"><img src="screenshots/journey-item-response.png" width="49%" alt="雨后小径中，伙伴回应本关的项目内容"><img src="screenshots/journey-workshop.png" width="49%" alt="回声工坊中的双箱和点灯机关"></p>
-<p align="center"><img src="screenshots/journey-personal-memory.png" width="49%" alt="夜间事务所里的样例回忆页"><img src="screenshots/journey-farewell.png" width="49%" alt="末班站台的行李与告别入口"></p>
+<p align="center"><img src="screenshots/journey-personal-memory.png" width="49%" alt="夜间事务所里的样例回忆页"><img src="screenshots/journey-project-signoff.png" width="49%" alt="项目随身道具在伙伴登车前最后亮起"></p>
 
 截图使用内置天气 App 样例；回忆页里的个人补记是演示输入，不代表真实仓库提交或项目经历。
 
