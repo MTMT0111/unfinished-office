@@ -24,9 +24,14 @@ test('书签只保留已走过且有内容的回忆，不能自动替玩家选�
 test('告别回应书签和未完成事项，不把未翻过的提交说成经历或提前宣称已经关灯',()=>{
   const identity=example('weather');identity.regret='还没试用';identity.milestones=normalizeMilestones([commit,{...commit,sha:other,commit:{...commit.commit,message:'还未翻到的更新'}}]);
   const journey={...newJourney(),visited:[0],memories:[0,3],bookmark:0,resolution:'carry' as const,skipped:true};
-  const words=farewellLines(identity,journey);assert(words.memory.includes('增加城市输入检查'));assert(words.choice.includes('还没试用'));assert(words.luggage.includes('2 件旅途物件'));assert(words.signal.includes(identity.facts.name.value));assert(words.closing.includes('今天先到这里'));
+  const words=farewellLines(identity,journey);assert(words.memory.includes('增加城市输入检查'));assert(words.choice.includes('还没试用'));assert(words.luggage.includes('2 件旅途物件'));assert(words.luggage.includes('增加城市输入检查'));assert(words.signal.includes(identity.facts.name.value));assert(words.closing.includes('今天先到这里'));
   assert.equal(recalledKeepsake(journey.memories,.079),undefined);assert.equal(recalledKeepsake(journey.memories,.08),0);assert.equal(recalledKeepsake(journey.memories,.13),3);assert.equal(recalledKeepsake(journey.memories,.18),undefined);
   const story=memoryStory(identity,6,journey);assert(!story.lines.join('').includes('还未翻到的更新'));assert(!story.lines.join('').includes('关上事务所的灯'));assert(story.lines.at(-1)?.includes('等你亲手关灯'));
+});
+test('告别字幕截短过长的项目线索且保留完整行李故事',()=>{
+  const subject='项目线索'.repeat(12),identity=example('weather');identity.keywords=[];identity.milestones=normalizeMilestones([{...commit,commit:{...commit.commit,message:subject}}]);
+  const journey={...newJourney(),memories:[0]},words=farewellLines(identity,journey);
+  assert(words.luggage.includes(`${subject.slice(0,28)}…`));assert(keepsakeStory(identity,0,journey).topic.text===subject);
 });
 test('提交保留真实日期、作者和共同署名，限制改动片段并剔除凭据',()=>{
   const actual=normalizeMilestones([commit],'owner/project')[0];

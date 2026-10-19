@@ -1,4 +1,4 @@
-import { count, fields, sourceLabel, type Identity, type Field } from './input.ts';
+import { count, fields, sourceLabel, take, type Identity, type Field } from './input.ts';
 import type { Journey } from './game.ts';
 import { dossier } from './dossier.ts';
 import { diaryLines } from './journal.ts';
@@ -84,11 +84,13 @@ export function rememberedPage(identity:Identity,journey:Journey,index=journey.b
   return item.empty?null:{index,title:item.text,source:item.source};
 }
 export function farewellLines(identity:Identity,journey:Journey):{memory:string;choice:string;luggage:string;signal:string;closing:string}{
-  const page=rememberedPage(identity,journey),unfinished=chapterCargo(identity,5);
+  const page=rememberedPage(identity,journey),unfinished=chapterCargo(identity,5),topic=[...journey.memories].reverse().map(index=>keepsakeTopic(identity,index)).find(item=>item.source!=='旅途物件的象征');
+  const topicText=topic?`${take(topic.text,28)}${count(topic.text)>28?'…':''}`:undefined;
+  const luggage=journey.memories.length?`这一路收好的 ${journey.memories.length} 件旅途物件${topicText?`，也留着「${topicText}」这条线索`:'，也都在这里'}。`:'今天没有收起行李，也不用勉强。';
   return {
     memory:page?`你想留下的这一页：「${page.title}」`:'这段路，我们先走到这里。',
     choice:journey.resolution==='carry'?(unfinished.source==='未说明'?'留白页，留给下一站。':`留给下一站：「${unfinished.text}」`):journey.resolution==='shelf'?(unfinished.source==='未说明'?'还没写完的，先留在书架。':`先收在书架：「${unfinished.text}」`):'还没决定的，可以慢慢想。',
-    luggage:journey.memories.length?`这一路收好的 ${journey.memories.length} 件旅途物件，也都在这里。`:'今天没有收起行李，也不用勉强。',
+    luggage,
     signal:`最后，替「${identity.facts.name.value||'这个项目'}」把这件随身道具再亮一次。`,
     closing:journey.skipped?'今天先到这里。谢谢你来陪我，再见。':'谢谢你陪我走到这里。再见。',
   };
