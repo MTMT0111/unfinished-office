@@ -130,7 +130,7 @@ function prop(c:CanvasRenderingContext2D,id:Identity,x:number,y:number){
     case 'record':r(-5,-7,10,14,'#242d42');r(-7,-5,14,10,'#242d42');r(-2,-2,5,5,colors.rose);r(0,0,1,1,colors.gold);break;
   }
 }
-function person(c:CanvasRenderingContext2D,id:Identity,kind:'you'|'ghost',x:number,y:number,time:number,walking:number,active:boolean,cheer=false){
+function person(c:CanvasRenderingContext2D,id:Identity,kind:'you'|'ghost',x:number,y:number,time:number,walking:number,active:boolean,cheer=false,carryProp=true){
   c.save();c.translate(Math.round(x),Math.round(y));
   rect(c,-8,5,17,4,'#283c3f');
   const bob=kind==='ghost'?Math.sin(time*2.8)*1.3:-Math.sin(walking*Math.PI)*2;
@@ -143,7 +143,7 @@ function person(c:CanvasRenderingContext2D,id:Identity,kind:'you'|'ghost',x:numb
     if(cheer){rect(c,-12,-11,5,3,cream);rect(c,9,-14,4,3,cream);}else rect(c,-11,-3,4,3,cream);
     if(id.accessory==='hat'){rect(c,-6,-19,12,4,'#685b78');rect(c,-9,-15,18,2,colors.gold);}
     if(id.accessory==='bow'){rect(c,-3,-1,3,3,colors.rose);rect(c,1,-1,3,3,colors.rose);}
-    if(!cheer)prop(c,id,12,-1);
+    if(!cheer&&carryProp)prop(c,id,12,-1);
   }else{
     rect(c,-6,-10,12,12,'#c38b75');rect(c,-5,-18,10,9,'#edc6a3');rect(c,-7,-20,13,5,'#4c4252');rect(c,-8,-16,17,2,'#4c4252');
     rect(c,2,-14,2,2,colors.ink);rect(c,-7,-9,13,3,colors.gold);rect(c,-8,-6,3,6,colors.gold);
@@ -290,7 +290,12 @@ export function drawFarewell(c:CanvasRenderingContext2D,id:Identity,time:number,
     for(let i=0;i<6;i++){const angle=i*Math.PI/3+time*2,radius=9+Math.sin(time*5+i)*2;rect(c,ghostX+12+Math.cos(angle)*radius,ghostY-1+Math.sin(angle)*radius,2,2,i%2?colors.gold:colors.mint);}
     c.restore();
   }
-  c.save();c.globalAlpha=ghostAlpha;person(c,id,'ghost',ghostX,ghostY,time+departure*8,boarding,false,false);c.restore();
+  c.save();c.globalAlpha=ghostAlpha;person(c,id,'ghost',ghostX,ghostY,time+departure*8,boarding,false,false,departure<.68);c.restore();
+  if(departure>=.68){
+    const handoff=ease((departure-.68)/.18),startX=ghostX+12,startY=ghostY-1+Math.round(Math.sin((time+departure*8)*2.8)*1.3),x=startX+(290-startX)*handoff,y=startY+(128-startY)*handoff;
+    prop(c,id,x,y);
+    if(!settled)star(c,x+7,y-9,colors.gold,.5+Math.sin(time*7)*.15);
+  }
   if(journey?.bookmark!==undefined&&journey.visited.includes(journey.bookmark)){
     const handover=ease(departure/.22),bookX=209-18*handover,bookY=139-5*Math.sin(handover*Math.PI);
     rect(c,bookX-7,bookY-5,13,10,'#6f98ad');rect(c,bookX-5,bookY-4,9,7,'#e1e7df');rect(c,bookX-6,bookY-5,2,10,'#476279');rect(c,bookX+1,bookY-5,2,8,'#edc68b');
@@ -301,7 +306,6 @@ export function drawFarewell(c:CanvasRenderingContext2D,id:Identity,time:number,
   if(departure>.2&&departure<.76){for(let i=1;i<=3;i++)rect(c,ghostX-i*7,ghostY-12+(i%2)*5,2,2,i%2?colors.gold:colors.mint);}
   rect(c,277,85,2,34,'#bf9d7a');rect(c,272,114,12,4,'#f2d59a');rect(c,275,118,6,3,'#ffeac0');
   c.save();c.globalAlpha=.07+Math.sin(time*1.8)*.01;c.fillStyle=colors.gold;c.beginPath();c.moveTo(273,120);c.lineTo(242,165);c.lineTo(314,165);c.lineTo(281,120);c.fill();c.restore();
-  if(departure>.84)star(c,258,126,colors.gold,1.3);
   const fade=ease((dark-.88)/.12);if(fade){c.fillStyle=`rgba(12,16,31,${fade*.84})`;c.fillRect(0,0,WIDTH,HEIGHT);}
   const celebration=settled?0:ease((departure-.62)/.38);
   if(celebration){

@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {normalizeMilestones,suggestedMilestones,commitUrl} from '../src/project.ts';
 import {parseAnalysis,validateProject} from '../src/analysis.ts';
-import {example} from '../src/input.ts';
+import {example,fiction} from '../src/input.ts';
 import {chapterCargo,keepsakeStory,keepsakeTopic,memoryStory,memoryBookHtml,parcelContents,rememberedPage,farewellLines} from '../src/memory.ts';
 import {newJourney} from '../src/game.ts';
 import {recalledKeepsake} from '../src/scene.ts';
@@ -24,7 +24,7 @@ test('书签只保留已走过且有内容的回忆，不能自动替玩家选�
 test('告别回应书签和未完成事项，不把未翻过的提交说成经历或提前宣称已经关灯',()=>{
   const identity=example('weather');identity.regret='还没试用';identity.milestones=normalizeMilestones([commit,{...commit,sha:other,commit:{...commit.commit,message:'还未翻到的更新'}}]);
   const journey={...newJourney(),visited:[0],memories:[0,3],bookmark:0,resolution:'carry' as const,skipped:true};
-  const words=farewellLines(identity,journey);assert(words.memory.includes('增加城市输入检查'));assert(words.choice.includes('还没试用'));assert(words.luggage.includes('2 件旅途物件'));assert(words.luggage.includes('增加城市输入检查'));assert(words.signal.includes(identity.facts.name.value));assert(words.closing.includes('今天先到这里'));
+  const words=farewellLines(identity,journey);assert(words.memory.includes('增加城市输入检查'));assert(words.choice.includes('还没试用'));assert(words.luggage.includes('2 件旅途物件'));assert(words.luggage.includes('增加城市输入检查'));assert(words.signal.includes(identity.facts.name.value));assert(words.signal.includes(fiction(identity).finale));assert(words.closing.includes('今天先到这里'));
   assert.equal(recalledKeepsake(journey.memories,.079),undefined);assert.equal(recalledKeepsake(journey.memories,.08),0);assert.equal(recalledKeepsake(journey.memories,.13),3);assert.equal(recalledKeepsake(journey.memories,.18),undefined);
   const story=memoryStory(identity,6,journey);assert(!story.lines.join('').includes('还未翻到的更新'));assert(!story.lines.join('').includes('关上事务所的灯'));assert(story.lines.at(-1)?.includes('等你亲手关灯'));
 });
