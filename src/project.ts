@@ -110,6 +110,7 @@ export async function readFolderFiles(files:File[],signal:AbortSignal):Promise<P
 export function localIdentity(project:Project):Identity{
   const readme=project.files.find(f=>/^readme/i.test(f.path.split('/').at(-1)!));
   const result=parseInput('',readme?.text||'','readme');
+  result.sourceFiles=project.files.map(file=>({...file}));
   if(!result.facts.name.value)result.facts.name={value:project.label,source:'project',evidence:'所选项目名称',confirmed:false};
   result.facts.name.value=take(result.facts.name.value,40);
   if(readme?.truncated){result.facts.completed={value:'',source:null,evidence:'',confirmed:false};result.facts.unfinished={value:'',source:null,evidence:'',confirmed:false};}

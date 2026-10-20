@@ -178,7 +178,7 @@ export function setupImport(onConfirm:(identity:Identity)=>void):()=>void{
       signal.throwIfAborted();
       if(!response.ok)throw new Error(data?.error||'分析失败，请重试。');
       if(!data?.identity?.facts)throw new Error('API 连接结束，但没有完整档案。材料已保留，请重试。');
-      onConfirm(data.identity);
+      onConfirm({...data.identity,sourceFiles:snapshot.files.map(file=>({...file}))});
     }finally{stop();signal.removeEventListener('abort',stop);}
   }));
   key.addEventListener('input',()=>{el('api-status').textContent=key.value.trim()?'密钥已填 · 仅本次会话':configured?'本机已配置密钥':'待填写密钥';});

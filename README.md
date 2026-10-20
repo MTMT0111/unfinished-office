@@ -4,6 +4,10 @@
 
 陪伴多年的项目，也可以圆满收尾。出发前可选择「圆满收尾」「暂时休息」「交给后来的人」，或「暂不定义，先回看」；书库、告别字幕和导出的回忆册会回应你的选择。到了站台仍能改主意，关卡进度、留言和书签会保留。带走纪念页可以只是带走收获，便签也可以是祝福，不必成为新的任务。
 
+出发前分为「项目原件 → 同行心意 → 目的地」三个页面。原件页可翻看所选 README、源码或提交差异，并添加最多 4 张截图；结果页分为纪念票、回忆册、项目原件。图片留在当前页面，不发给分析服务；下载回忆册会保存图片和所选文字原件。
+
+天气 App 的「输入城市」行李标签现在可以点开体验：输入北京或 New York，沿途换成灯笼屋檐或大都会天际线，还可选择瑞雪、圣诞和万圣节场景。其他城市使用通用夜景；这是本地场景风格，不查询实时天气。找到街角的灯可以获得「同行灯」，同时照亮两位伙伴能走的下一格。最后是约 9 秒的近景交接、登车、镜头拉远与烟花；减少动态直接呈现终态。
+
 ## 先试玩
 
 [打开公网试玩版](https://mtmt0111.github.io/unfinished-office-play/)。这是面向玩家的静态版本，包含样例、浏览器支持的本地材料选择、手动整理和完整游戏。要用本机 GitHub 登录态读取仓库或调用 API，请运行下面的完整版本。
@@ -12,6 +16,8 @@
 
 <p align="center"><img src="screenshots/journey-item-response.png" width="49%" alt="雨后小径中，伙伴回应本关的项目内容"><img src="screenshots/journey-workshop.png" width="49%" alt="回声工坊中的双箱和点灯机关"></p>
 <p align="center"><img src="screenshots/journey-personal-memory.png" width="49%" alt="夜间事务所里的样例回忆页"><img src="screenshots/journey-project-signoff.png" width="49%" alt="项目随身道具在伙伴登车前最后亮起"></p>
+<p align="center"><img src="screenshots/experience-beijing.png" width="49%" alt="北京瑞雪、灯笼与可操作的城市输入"><img src="screenshots/experience-newyork-halloween.png" width="49%" alt="纽约天际线与万圣节南瓜场景"></p>
+<p align="center"><img src="screenshots/experience-farewell-wide.png" width="49%" alt="镜头拉远后的北京烟花告别"><img src="screenshots/experience-ticket.png" width="49%" alt="带城市、告别心意和城市灯语记录的纪念票"></p>
 
 截图使用内置天气 App 样例；回忆页里的个人补记是演示输入，不代表真实仓库提交或项目经历。
 
@@ -49,6 +55,8 @@ npm run build
 ```
 
 修改后请先运行 `npm test` 和 `npm run build`，再提交分支并发起 Pull Request。`npm test` 使用 Node.js 内置测试运行器；浏览器端到端脚本依赖本机 Playwright 与 Edge，具体环境见 `tests/` 脚本。
+
+`node tests/experience.mjs` 对运行中的本地 Demo 检查原件与图片、城市切换、彩蛋能力、连续帧布局稳定性、告别镜头和离线导出。`tests/browser.mjs` 还读取开发模块来检查动画，需运行 Vite，并将 `APP_URL` 设为 `http://127.0.0.1:5173`。`tests/play-settings.mjs` 覆盖七站搬运与既有回忆交互。
 
 目前 **Yongzhi Li（[@chnoorlee](https://github.com/chnoorlee)）** 已接受邀请，并以写入权限参与私有源码共创。
 

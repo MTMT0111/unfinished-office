@@ -12,7 +12,7 @@ const waitState=value=>page.waitForFunction(s=>document.getElementById('app').da
 const keys={up:'ArrowUp',down:'ArrowDown',left:'ArrowLeft',right:'ArrowRight',switch:'x'};
 const shot=name=>page.screenshot({path:path.join(out,name+'.png'),fullPage:true});
 try{
-  await page.goto(process.env.APP_URL||'http://127.0.0.1:4188/');await page.locator('#sample-weather').click();
+  await page.goto(process.env.APP_URL||'http://127.0.0.1:4188/');await page.locator('#sample-weather').click();await page.locator('[data-preflight=heart]').click();
   assert.equal(await page.locator('#farewell-intent').inputValue(),'undecided');
   await page.locator('#farewell-intent').selectOption('completed');assert((await page.locator('#farewell-intent-note').innerText()).includes('庆祝'));
   for(const width of [320,390,768,1280]){await page.setViewportSize({width,height:900});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));const box=await page.locator('#farewell-intent').boundingBox();assert(box.height>=44);if(width===390)await shot('journey-intent-mobile');}

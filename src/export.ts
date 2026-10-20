@@ -2,6 +2,7 @@ import { farewells, memorialDetail, safeFilename, type Identity } from './input.
 import { drawFarewell, drawKeepsake } from './scene.ts';
 import { levels, type Journey } from './game.ts';
 import { memoryBookHtml, rememberedPage } from './memory.ts';
+import { destinationCaption } from './destination.ts';
 
 export function localDate(now=new Date()):string{
   return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
@@ -25,14 +26,17 @@ export async function createMemorial(identity:Identity,date:string|null,journey:
   const c=canvas.getContext('2d');if(!c)throw new Error('图片画布创建失败，请重试。');
   const font=(size:number)=>`${size}px "Microsoft YaHei", "PingFang SC", sans-serif`;
   c.font=font(32);const title=wrap(c,frozen.facts.name.value,1008);
-  const heroY=70+title.length*40;
-  canvas.height=heroY+720+110;
+  const heroY=100+title.length*40;
+  canvas.height=heroY+650+180;
   c.fillStyle='#eee1c5';c.fillRect(0,0,1152,canvas.height);c.textBaseline='top';c.textAlign='left';
-  c.fillStyle='#8a7965';c.font=font(14);c.fillText('烂尾事务所'+(frozen.demo?' · 演示':'')+' · '+farewells[frozen.farewellIntent??'undecided'].label,48,20);c.textAlign='right';if(date)c.fillText(date.replace(/-/g,'.'),1104,20);c.textAlign='left';
-  c.fillStyle='#302c3c';c.font=font(32);title.forEach((line,i)=>c.fillText(line,48,49+i*40));
-  c.imageSmoothingEnabled=false;c.drawImage(scene,0,heroY,1152,720);
-  const y=heroY+766;
-  c.strokeStyle='#b7a78c';c.setLineDash([2,7]);c.beginPath();c.moveTo(48,y);c.lineTo(410,y);c.stroke();c.setLineDash([]);
+  c.fillStyle='#263c4e';c.fillRect(0,0,1152,9);c.fillStyle='#8a7965';c.font=font(14);c.fillText('烂尾事务所 / 同行纪念票'+(frozen.demo?' · 演示':''),48,28);c.textAlign='right';c.fillText(destinationCaption(frozen.destination),1104,28);c.textAlign='left';
+  c.fillStyle='#302c3c';c.font=font(32);title.forEach((line,i)=>c.fillText(line,48,63+i*40));
+  c.fillStyle='#786954';c.font=font(16);c.fillText(farewells[frozen.farewellIntent??'undecided'].label,48,heroY-25);
+  c.textAlign='right';c.fillText(date?date.replace(/-/g,'.'):'留给这一程的你',1104,heroY-25);c.textAlign='left';
+  c.imageSmoothingEnabled=false;c.drawImage(scene,48,heroY,1056,660);
+  const y=heroY+710;
+  c.strokeStyle='#b7a78c';c.setLineDash([3,7]);c.beginPath();c.moveTo(0,y-22);c.lineTo(1152,y-22);c.stroke();c.setLineDash([]);
+  c.fillStyle='#152238';for(const x of [0,1152]){c.beginPath();c.arc(x,y-22,15,0,Math.PI*2);c.fill();}
   levels.forEach((_,i)=>{
     const x=48+i*72,visited=record.visited.includes(i);c.fillStyle=visited?'#6b8775':'#d5c7aa';c.fillRect(x-5,y-5,10,10);
     if(record.memories.includes(i))drawKeepsake(c,i,x,y,2);
@@ -43,6 +47,7 @@ export async function createMemorial(identity:Identity,date:string|null,journey:
     c.font=font(13);c.fillText('想留下的这一页',1104,y-26);
     c.font=font(20);const lines=wrap(c,page.title,590);c.fillText(lines[0]+(lines.length>1?'…':''),1104,y-5);
   }else{c.font=font(20);c.fillText(frozen.farewellIntent&&frozen.farewellIntent!=='undecided'?farewells[frozen.farewellIntent].finale:record.skipped?'今天先到这里。谢谢你来过。':'谢谢你，陪它走完这一程。',1104,y-10);}
+  c.textAlign='left';c.font=font(13);c.fillStyle='#8a7965';c.fillText(`${record.visited.length} / 7 站 · ${record.memories.length} 件回忆${record.citySecret?' · 城市灯语已点亮':''}`,48,y+45);c.textAlign='right';c.fillText('ONE MORE LITTLE JOURNEY',1104,y+45);
   const blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error('图片暂时没有生成，请重试。')),'image/png'));
   return {blob,filename:safeFilename(frozen.facts.name.value)};
 }

@@ -1,3 +1,4 @@
+import type { Destination } from './destination.ts';
 export type Source = 'user' | 'readme' | 'project' | 'analysis';
 export type Fact = { value: string; source: Source | null; evidence: string; confirmed: boolean };
 export type Prop = 'umbrella' | 'screen' | 'manuscript' | 'draft' | 'camera' | 'sprout' | 'record';
@@ -29,6 +30,9 @@ export type Identity = {
   accessory: Accessory;
   regret?: string;
   farewellIntent?: FarewellIntent;
+  destination?: Destination;
+  sourceFiles?: {path:string;text:string;truncated:boolean}[];
+  photos?: {name:string;src:string}[];
   keywords?: { text:string; evidence:string; category:'purpose'|'built'|'next'|'tech' }[];
   milestones?: GitMilestone[];
   review?: { summary: string; items: { text:string; evidence:string }[]; limits:string[] };
@@ -98,6 +102,7 @@ export function example(which: 'weather' | 'novel'): Identity {
   const result = parseInput('', text, 'readme');
   result.facts.name = fact(name, 'readme');
   result.demo = true;
+  result.sourceFiles=[{path:'README.md',text,truncated:false}];
   return result;
 }
 

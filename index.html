@@ -9,6 +9,7 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/src/style.css">
   <link rel="stylesheet" href="/src/journey.css">
+  <link rel="stylesheet" href="/src/experience.css">
 </head>
 <body>
   <a class="skip-link" href="#input-panel">跳至项目登记</a>
@@ -25,14 +26,15 @@
         <ol class="cover-route" aria-label="七站旅程：雨后小径、萤火渡口、旧日温室、屋顶微光、回声工坊、留白书库、末班站台"><li>小径</li><li>渡口</li><li>温室</li><li>屋顶</li><li>工坊</li><li>书库</li><li>站台</li></ol>
         <div id="sample-row" class="sample-row"><button id="sample-weather" type="button" class="sample"><span class="sample-icon" aria-hidden="true">☂</span><span class="sample-title">天气 App</span><span class="sample-arrow" aria-hidden="true">→</span></button><button id="sample-novel" type="button" class="sample"><span class="sample-icon" aria-hidden="true">▤</span><span class="sample-title">第三章小说</span><span class="sample-arrow" aria-hidden="true">→</span></button><a class="register-link" href="#input-panel"><span class="sample-icon" aria-hidden="true">＋</span><span class="sample-title">带上我的项目</span><span class="sample-arrow" aria-hidden="true">→</span></a></div>
       </div>
-      <div id="game-hud" class="game-hud" hidden><div><span id="chapter-number" class="eyebrow"></span><h2 id="chapter-title"></h2></div><span id="memory-indicator"></span></div>
+      <div id="stage-frame"><div id="game-hud" class="game-hud" hidden><div><span id="chapter-number" class="eyebrow"></span><h2 id="chapter-title"></h2></div><span id="memory-indicator"></span></div>
       <div class="stage-holder"><div id="stage-wrap">
         <canvas id="stage" width="384" height="240" tabindex="0" role="img" aria-describedby="game-objective board-description" aria-label="森林中的你和项目幽灵">你的浏览器需要支持 Canvas 才能展示像素游戏。</canvas>
         <div id="opening-panel" class="opening-panel" hidden aria-live="polite"><span class="eyebrow">夜班开门</span><p id="opening-line">夜班刚刚亮灯。</p><button id="skip-opening" class="quiet" type="button">跳过</button></div>
         <div id="clear-panel" class="scene-panel" hidden><span class="eyebrow">✓</span><h2 id="clear-title"></h2><p id="clear-memory"></p><button id="next-level" class="primary" type="button">下一站 →</button></div>
         <div id="paused-panel" class="scene-panel" hidden><h2>歇一会儿</h2><button id="resume-game" class="primary" type="button">继续走</button></div>
         <button id="lamp-hotspot" type="button" aria-label="关闭站台吊灯" hidden></button>
-      </div></div>
+        <button id="city-secret" class="city-secret" type="button" aria-label="看看街角那盏特别的灯" title="这盏灯，好像在等你" hidden>✦</button>
+      </div></div></div>
       <section id="memory-panel" class="memory-panel" aria-labelledby="memory-title" hidden>
         <span id="memory-chapter" class="eyebrow"></span><h2 id="memory-title"></h2><p id="memory-keepsake" class="keepsake-caption"></p>
         <article id="story-card" class="story-card"><span id="story-scene" class="eyebrow"></span><div id="memory-text" class="story-lines"></div><small id="memory-source" class="source"></small><div id="memory-evidence"></div></article>
@@ -42,6 +44,8 @@
         <div class="actions"><button id="memory-back" class="quiet" type="button">回关卡看看</button><button id="memory-continue" class="primary" type="button">继续走 →</button></div>
       </section>
       <div id="game-controls" hidden>
+        <details id="city-workbench" class="city-workbench"><summary id="city-workbench-title">项目体验 · 输入城市</summary><form id="city-form"><label for="city-input">这一程，想去哪个城市？</label><div class="city-input-row"><input id="city-input" type="text" placeholder="北京 / New York" maxlength="80"><button type="submit">抵达</button></div><label for="city-season">场景风格</label><select id="city-season"><option value="night">城市夜色</option><option value="snow">瑞雪</option><option value="christmas">圣诞灯火</option><option value="halloween">南瓜之夜</option></select><div class="city-presets"><button type="button" data-city="北京" data-season="snow">北京 · 瑞雪</button><button type="button" data-city="纽约" data-season="christmas">纽约 · 圣诞</button></div><p id="city-status" class="note" role="status">城市会改变沿途建筑与灯光，场景天气由你选择。</p></form></details>
+        <button id="companion-light" type="button" aria-pressed="false" hidden>同行灯 · 照亮两人的下一步</button>
         <div class="cargo-card"><span id="cargo-label" class="eyebrow"></span><div id="parcel-list" class="parcel-list" role="group" aria-label="行李标签，点击在画面中找它"></div><details id="cargo-details"><summary id="cargo-text"></summary><p id="cargo-detail"></p><small id="cargo-source"></small></details></div>
         <div id="goal-progress" class="goal-progress" aria-label="到站条件"><span id="goal-boxes"></span><span id="goal-lamps" hidden></span><span id="goal-you"></span><span id="goal-ghost"></span></div>
         <div id="choice-legend" class="choice-legend" hidden><span id="choice-shelf">▤ 留在书架</span><span id="choice-carry">▣ 带向下一站</span></div>
@@ -84,10 +88,11 @@
 
     <section id="confirm-panel" class="paper" aria-labelledby="confirm-title" hidden>
       <div class="section-title"><span class="eyebrow">出发前</span><h2 id="confirm-title">它的行李</h2><p id="confirm-note"></p></div>
-      <div id="confirm-keywords" class="keyword-grid"></div>
+      <nav class="page-tabs" aria-label="出发前的三个步骤"><button type="button" data-preflight="project" aria-current="step">01 项目原件</button><button type="button" data-preflight="heart">02 同行心意</button><button type="button" data-preflight="scene">03 目的地</button></nav>
       <form id="confirm-form" novalidate>
+        <section id="preflight-project" class="preflight-page"><div class="section-title"><h3>那些真实留下的东西</h3><p class="note">翻一页 README，看一段代码，或带上熟悉的项目截图。</p></div><div id="project-media"></div><div class="media-tools"><label class="file-button" for="project-photos">添加照片 / 截图<input id="project-photos" type="file" accept="image/png,image/jpeg,image/webp" multiple></label><button id="clear-photos" type="button" class="quiet" hidden>移除图片</button></div><p id="photo-status" class="note" role="status">最多 4 张，仅用于本次旅程，不发送给分析服务。</p><details><summary>项目摘要与来源</summary><div id="confirm-keywords" class="keyword-grid"></div></details></section>
+        <section id="preflight-heart" class="preflight-page" hidden>
         <div class="farewell-card"><label for="farewell-intent">这次同行，你想怎样送别？</label><p class="note">多年的投入，有收获，也可能有不舍。由你决定这一程的意义。</p><select id="farewell-intent" aria-describedby="farewell-intent-note"></select><p id="farewell-intent-note" class="intent-response" role="status"></p><small>到站后仍能改主意，已经走过的路会保留。</small></div>
-        <fieldset class="play-mode"><legend>这段旅程，谁来走？</legend><label><input type="radio" name="play-mode" value="solo" checked><span>自己带它</span></label><label><input type="radio" name="play-mode" value="together"><span>两人同屏<small>同一键盘</small></span></label></fieldset>
         <details id="edit-facts"><summary>核对资料与来源 / 修改</summary>
         <label for="edit-name">项目名称</label><input id="edit-name" type="text"><small id="source-name" class="source"></small>
         <label for="edit-purpose">它原本想做什么</label><textarea id="edit-purpose" rows="2" placeholder="未说明"></textarea><small id="source-purpose" class="source"></small>
@@ -96,25 +101,31 @@
         <div class="personal-note"><label for="edit-reason">留一句自己的话 <span class="hint">选填</span></label><input id="edit-reason" type="text" placeholder="先去过个夏天。"><small id="source-reason" class="source"></small></div>
         <details id="regret-details"><summary>这些年，想留下什么 <span class="hint">选填</span></summary><label class="sr-only" for="project-regret">想留下的收获、回忆或惦念，最多 120 字</label><textarea id="project-regret" rows="2"></textarea><small class="source">可以是一件做成的事、一个人，也可以是遗憾。书库会替你收好这句话。</small></details>
         <details id="review-panel" hidden><summary>查看项目审阅与依据</summary><div id="review-content"></div></details>
+        </section>
+        <section id="preflight-scene" class="preflight-page" hidden><div class="destination-preview"><canvas id="destination-preview" width="384" height="180" aria-label="目的地场景预览"></canvas><p id="destination-caption">林间夜路</p></div><label for="departure-city">把项目带去一座城市 <small>也可以留在林间</small></label><div class="city-input-row"><input id="departure-city" type="text" placeholder="北京 / New York"><button id="preview-city" type="button">看看这座城</button></div><label for="departure-season">沿途的季节</label><select id="departure-season"><option value="night">城市夜色</option><option value="snow">瑞雪</option><option value="christmas">圣诞灯火</option><option value="halloween">南瓜之夜</option></select><p id="destination-error" class="error" role="alert"></p><p class="note">北京有灯笼与屋檐，纽约有城市天际线。沿途还可以换城。</p>
+        <fieldset class="play-mode"><legend>这段旅程，谁来走？</legend><label><input type="radio" name="play-mode" value="solo" checked><span>自己带它</span></label><label><input type="radio" name="play-mode" value="together"><span>两人同屏<small>同一键盘</small></span></label></fieldset>
         <details><summary>同行伙伴 / 外观</summary><div class="choices"><label for="prop">随身物件<select id="prop"><option value="umbrella">小雨伞</option><option value="screen">小屏幕</option><option value="manuscript">手稿</option><option value="draft">草稿</option><option value="camera">相机</option><option value="sprout">小芽</option><option value="record">唱片</option></select></label><label for="palette">颜色<select id="palette"><option value="cream">奶白</option><option value="lavender">浅紫</option><option value="mint">薄荷</option></select></label><label for="accessory">配件<select id="accessory"><option value="none">原样</option><option value="bow">领结</option><option value="hat">夜班帽</option></select></label></div></details>
         <label class="check"><input id="reduced" type="checkbox">减少动态效果</label>
+        </section>
         <p id="confirm-error" class="error" role="alert"></p>
-        <div class="actions end"><button id="back" class="quiet" type="button">返回</button><button id="start" type="submit" class="primary">一起出发 →</button></div>
+        <div class="actions end preflight-actions"><button id="back" class="quiet" type="button">返回</button><button id="preflight-next" type="button">下一页 →</button><button id="start" type="submit" class="primary">一起出发 →</button></div>
       </form>
     </section>
 
     <section id="result-panel" class="result" aria-labelledby="result-title" hidden>
+      <nav class="page-tabs" aria-label="旅程纪念"><button type="button" data-result-page="ticket" aria-current="page">纪念票</button><button type="button" data-result-page="memories">回忆册</button><button type="button" data-result-page="project">项目原件</button></nav>
       <span class="eyebrow">同行纪念票</span><h2 id="result-title">今天先到这里</h2><p id="result-name"></p><p id="result-intent" class="note"></p><p id="journey-stats" class="note"></p>
-      <img id="memorial-preview" alt="你和项目幽灵在夜间站台的告别纪念票" hidden>
+      <div id="result-ticket" class="result-page"><img id="memorial-preview" alt="你和项目幽灵在夜间站台的告别纪念票" hidden>
       <p id="ending-choice" class="ending-choice" hidden></p>
       <div id="remembered-page" class="remembered-page" hidden><small>你想留下的这一页</small><p id="remembered-title"></p><small id="remembered-source"></small><button id="reopen-bookmark" class="quiet" type="button">再翻这一页 →</button></div>
       <div id="ending-step" class="future-note ending-step" hidden><small>带给下一程的一句话</small><p id="ending-step-text"></p></div>
       <div class="date-row"><label class="check"><input id="include-date" type="checkbox">写下这次告别的日期</label><label id="date-label" for="memorial-date" hidden>保留日期<input id="memorial-date" type="date" aria-label="纪念图日期"></label></div>
+      </div>
+      <section id="result-project" class="result-page" hidden><h3>项目仍在这里</h3><div id="result-media"></div><details class="result-dossier"><summary>项目档案 / 更新日记</summary><div id="result-keywords" class="keyword-grid"></div></details></section>
+      <section id="result-memories" class="result-page" hidden><p id="album-empty" class="note">这次没有翻开的回忆，可以下一次再看。</p><details id="album-section" class="result-dossier" tabindex="-1" hidden open><summary>翻翻这一路的回忆</summary><div id="memory-album"></div></details></section>
       <p id="export-status" class="note" role="status">正在整理纪念画面…</p><p id="export-error" class="error" role="alert"></p>
       <div class="actions"><button id="download" class="primary" type="button" disabled>保存纪念票</button><button id="save-book" type="button">保存回忆册</button><button id="replay" type="button">再走一次</button><button id="new-project" class="quiet" type="button">换一个项目</button><button id="retry-export" type="button" hidden>重新生成</button></div>
       <p id="book-status" class="note" role="status"></p>
-      <details id="album-section" class="result-dossier" tabindex="-1" hidden><summary>翻翻这一路的回忆</summary><div id="memory-album"></div></details>
-      <details class="result-dossier"><summary>项目档案 / 更新日记</summary><div id="result-keywords" class="keyword-grid"></div></details>
       <p class="note"><a id="open-image" target="_blank" rel="noopener" hidden>打不开下载？打开图片后手动保存</a></p>
     </section>
     <footer><span>一段小小的同行</span></footer>

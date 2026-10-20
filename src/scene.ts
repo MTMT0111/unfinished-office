@@ -1,6 +1,7 @@
 import { gateOpen, levels, positions, same, tile, type Board, type Point, type Journey } from './game.ts';
 import type { GitMilestone, Identity } from './input.ts';
 import { keepsakeTopic } from './memory.ts';
+import { drawCity, drawFireworks } from './destination.ts';
 
 export const WIDTH=384,HEIGHT=240,CELL=24,OX=84,OY=35;
 export const ease=(v:number)=>{const t=Math.max(0,Math.min(1,v));return t*t*(3-2*t);};
@@ -157,6 +158,7 @@ export function drawScene(c:CanvasRenderingContext2D,id:Identity,board:Board,ind
   const level=levels[index];c.imageSmoothingEnabled=false;
   let bg=backgrounds.get(index);if(!bg){bg=document.createElement('canvas');bg.width=WIDTH;bg.height=HEIGHT;background(bg.getContext('2d')!,index);backgrounds.set(index,bg);}
   c.drawImage(bg,0,0);const clock=options.reduced?0:time;
+  if(id.destination)drawCity(c,id.destination,clock,true);
   const r=(x:number,y:number,w:number,h:number,color:string)=>rect(c,x,y,w,h,color);
   for(let y=1;y<6;y++)for(let x=1;x<8;x++){
     const t=tile(level,{x,y}),px=OX+x*CELL,py=OY+y*CELL;
@@ -262,11 +264,16 @@ export function drawOpening(c:CanvasRenderingContext2D,id:Identity,time:number,j
   if(time<.35){c.fillStyle=`rgba(8,14,27,${1-ease(time/.35)})`;c.fillRect(0,0,384,240);}
 }
 
-export function drawFarewell(c:CanvasRenderingContext2D,id:Identity,time:number,dark=0,journey?:Journey,departure=0,selected?:number,ripples:StationRipple[]=[],rippleTime=time,settled=false){
+export function drawFarewell(c:CanvasRenderingContext2D,id:Identity,time:number,dark=0,journey?:Journey,departure=0,selected?:number,ripples:StationRipple[]=[],rippleTime=time,settled=false,cinematic=false){
+  const film=departure;
+  if(cinematic){departure=Math.min(1,film/.68);dark=0;}
+  c.save();
+  if(cinematic){const zoom=1.65-.65*ease((film-.42)/.45);c.translate(208,128);c.scale(zoom,zoom);c.translate(-208,-128);}
   rect(c,0,0,WIDTH,HEIGHT,'#1b233a');
   for(let i=0;i<50;i++)rect(c,(i*61+11)%384,(i*31+4)%130,1,1,'#8095a1');
   rect(c,296,25,26,26,'#d7d8bb');rect(c,291,30,36,16,'#d7d8bb');
   for(let i=0;i<14;i++)tree(c,i*32-12,136,45+i%3*11,'#2a4149');
+  if(id.destination)drawCity(c,id.destination,time);
   for(let i=0;i<6;i++)rect(c,22+i*63+Math.sin(time*.6+i)*6,125+Math.cos(time+i)*9,1,2,i%2?'#829b8b':'#c4c690');
   const trainLeave=54*ease((departure-.76)/.24);
   c.save();c.translate(trainLeave,0);
@@ -307,7 +314,7 @@ export function drawFarewell(c:CanvasRenderingContext2D,id:Identity,time:number,
   rect(c,277,85,2,34,'#bf9d7a');rect(c,272,114,12,4,'#f2d59a');rect(c,275,118,6,3,'#ffeac0');
   c.save();c.globalAlpha=.07+Math.sin(time*1.8)*.01;c.fillStyle=colors.gold;c.beginPath();c.moveTo(273,120);c.lineTo(242,165);c.lineTo(314,165);c.lineTo(281,120);c.fill();c.restore();
   const fade=ease((dark-.88)/.12);if(fade){c.fillStyle=`rgba(12,16,31,${fade*.84})`;c.fillRect(0,0,WIDTH,HEIGHT);}
-  const celebration=settled?0:ease((departure-.62)/.38);
+  const celebration=settled||cinematic?0:ease((departure-.62)/.38);
   if(celebration){
     const palette=[colors.gold,colors.mint,colors.cream,colors.rose];
     for(let burst=0;burst<4;burst++){
@@ -317,6 +324,9 @@ export function drawFarewell(c:CanvasRenderingContext2D,id:Identity,time:number,
     }
     for(let i=0;i<28;i++){const fall=(time*23+i*17)%112,x=(i*73+384+Math.sin(time+i)*13)%384;rect(c,x,fall,2,i%3===0?4:2,palette[i%palette.length]);}
   }
+  c.restore();
+  if(cinematic&&film>.55)drawFireworks(c,time,ease((film-.55)/.22));
+  if(settled&&id.destination)drawFireworks(c,2.6,.75);
   for(const ripple of ripples){
     const age=rippleTime-ripple.at;if(age<0||age>.95)continue;
     c.save();
