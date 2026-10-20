@@ -11,6 +11,7 @@ import { cleanText } from './project.ts';
 import { destination, destinationCaption, drawCity } from './destination.ts';
 import { readProjectPhoto, renderProjectMedia } from './project-media.ts';
 import { handoverMarkdown, relicFiles, relicRows, renderRelicDesk } from './relics.ts';
+import {drawRitual,ritualLights,ritualLines,sealRitual,unfinishedPage} from './ritual.ts';
 
 type State = 'input'|'reading'|'confirm'|'opening'|'playing'|'cleared'|'memory'|'paused'|'waiting'|'fading'|'done';
 const el = <T extends HTMLElement=HTMLElement>(id:string) => document.getElementById(id) as T;
@@ -22,6 +23,8 @@ const reduced=el<HTMLInputElement>('reduced'),includeDate=el<HTMLInputElement>('
 const settings=el<HTMLDialogElement>('game-settings'),guides=el<HTMLInputElement>('settings-guides'),settingsReduced=el<HTMLInputElement>('settings-reduced'),settingsSound=el<HTMLInputElement>('settings-sound');
 const image=el<HTMLImageElement>('memorial-preview'),download=el<HTMLButtonElement>('download'),openImage=el<HTMLAnchorElement>('open-image');
 const sound=new Sound();
+const ritualDialog=el<HTMLDialogElement>('farewell-ritual');
+let ritualStep=0,ritualRaf=0;
 let state:State='input',identity=example('weather'),draft:Identity=identity;
 let journey=newJourney(),levelIndex=0,board=newBoard(levels[0]),history:Board[]=[],future:Board[]=[],motion:Motion|undefined,playMode:'solo'|'together'='solo';
 let legalSteps:Point[]=[],resumeAfterSettings=false;
@@ -210,7 +213,7 @@ function showPreflight(page:string){
 for(const button of document.querySelectorAll<HTMLButtonElement>('[data-preflight]'))button.addEventListener('click',()=>showPreflight(button.dataset.preflight!));
 el('preflight-next').addEventListener('click',()=>showPreflight(preflightPage==='project'?'heart':'scene'));
 function showResultPage(page:string){
-  for(const name of ['ticket','memories','project'])el('result-'+name).hidden=name!==page;
+  for(const name of ['ticket','memories','project','ritual'])el('result-'+name).hidden=name!==page;
   for(const button of document.querySelectorAll<HTMLButtonElement>('[data-result-page]')){if(button.dataset.resultPage===page)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');}
   if(page==='memories')el<HTMLDetailsElement>('album-section').open=true;
 }
@@ -343,10 +346,10 @@ function returnToInput(){
 el('back').addEventListener('click',returnToInput);
 
 function waiting(){
-  stopClock();sound.stop();queued=[];setState('waiting');draw();animateWaiting();el('lamp').focus({preventScroll:true});
+  stopClock();sound.stop();queued=[];setState('waiting');draw();animateWaiting();el('begin-ritual').focus({preventScroll:true});
 }
 function animateWaiting(){
-  stopClock();if(!reduced.checked&&!document.hidden&&!settings.open&&!leaving){lastStamp=performance.now();raf=requestAnimationFrame(tick);}
+  stopClock();if(!reduced.checked&&!document.hidden&&!settings.open&&!ritualDialog.open&&!leaving){lastStamp=performance.now();raf=requestAnimationFrame(tick);}
 }
 function tick(now:number){
   if(!['opening','playing','cleared','memory','waiting'].includes(state))return;
@@ -497,6 +500,8 @@ function saveMemoryNote(){
 el('save-memory').addEventListener('click',saveMemoryNote);
 el<HTMLInputElement>('next-step').addEventListener('input',()=>{if(count(el<HTMLInputElement>('next-step').value.trim())<=60){el('next-step-error').textContent='';el('next-step').removeAttribute('aria-invalid');}});
 function renderAlbum(){
+  const lines=ritualLines(journey);el('ritual-tab').hidden=!lines.length;
+  el('ritual-receipt').replaceChildren(...lines.map(line=>{const p=document.createElement('p');p.textContent=line;return p;}));
   const relics=relicRows(identity,journey),shelf=el('relic-collection');shelf.replaceChildren();shelf.hidden=!relics.length;el('save-handover').hidden=!relics.length;
   if(relics.length){const heading=document.createElement('h3');heading.textContent='你亲手收好的项目遗物';shelf.append(heading);for(const row of relics){const button=document.createElement('button');button.type='button';button.textContent=`${row.label} · ${row.path}`;button.addEventListener('click',()=>openMemory(row.index,'done'));shelf.append(button);}}
   el('album-empty').hidden=journey.visited.length>0;
@@ -633,6 +638,48 @@ async function generatePreview(){
   }catch(e){if(sequence===exportSequence&&state==='done'){error('export-error',e);el('export-status').textContent='';el('retry-export').hidden=false;}}
 }
 function finish(){el('result-letter').hidden=!journey.farewellNote;el('result-letter-text').textContent=journey.farewellNote??'';showResultPage('ticket');renderProjectMedia(el('result-media'),identity);stopClock();dark=1;sound.stop();setState('done');draw();renderDossier(el('result-keywords'),identity);renderAlbum();el('result-name').textContent=identity.facts.name.value;el('journey-stats').textContent=`${journey.visited.length} / ${levels.length} 站 · ${journey.memories.length} 件旅途物件${journey.skipped?' · 提前到站':''}`;el('ending-choice').hidden=!journey.resolution;el('ending-choice').textContent=journey.resolution?resolutionText[journey.resolution]:'';void generatePreview();el('result-panel').scrollIntoView({block:'start',behavior:'instant'});el('replay').focus({preventScroll:true});}
+function paintRitual(animate=false){
+  cancelAnimationFrame(ritualRaf);const c=el<HTMLCanvasElement>('ritual-canvas').getContext('2d');if(!c)return;
+  const began=performance.now();
+  const frame=(now:number)=>{if(!ritualDialog.open)return;const p=animate&&!reduced.checked&&!document.hidden?Math.min(1,(now-began)/550):1;drawRitual(c,identity,journey,ritualStep,p);if(p<1)ritualRaf=requestAnimationFrame(frame);};
+  frame(began);
+}
+function showRitualStep(animate=false){
+  el('ritual-error').textContent='';
+  el('ritual-progress').textContent=`告别桌 · ${ritualStep+1} / 3`;
+  el('ritual-title').textContent=['安放未竟之事','为留下的东西点灯','给这一程落款'][ritualStep];
+  for(let i=0;i<3;i++)el('ritual-page-'+i).hidden=i!==ritualStep;
+  el('ritual-back').hidden=ritualStep===0;
+  el('ritual-next').textContent=['折好这一页','带着这盏灯，继续','封存告别记，送它启程'][ritualStep];
+  el('ritual-unfinished').textContent=unfinishedPage(identity);
+  el('ritual-intent').textContent=farewells[identity.farewellIntent??'undecided'].description;
+  const lights=ritualLights(identity,journey);
+  el('ritual-kept').textContent='灯下留下：'+(lights.find(light=>light.key===journey.ritual?.lightKey)?.title??'');
+  el('ritual-lights').replaceChildren(...lights.map(light=>{
+    const button=document.createElement('button');button.type='button';button.setAttribute('aria-pressed',String(journey.ritual?.lightKey===light.key));
+    const title=document.createElement('span'),source=document.createElement('small');title.textContent=light.title;source.textContent=light.source;button.append(title,source);
+    button.addEventListener('click',()=>{journey.ritual!.lightKey=light.key;sound.found();showRitualStep(true);el('ritual-next').focus({preventScroll:true});});return button;
+  }));
+  paintRitual(animate);
+}
+el('begin-ritual').addEventListener('click',()=>{
+  if(state!=='waiting')return;
+  if(!saveFarewellNote()){el('farewell-note').closest('details')!.open=true;el('farewell-note').focus();return;}
+  journey.ritual??={laid:false,lightKey:'',signature:''};
+  ritualStep=journey.ritual.lightKey?2:journey.ritual.laid?1:0;
+  el<HTMLInputElement>('ritual-signature').value=journey.ritual.signature;
+  stopClock();sound.stop();ritualDialog.showModal();showRitualStep();el('ritual-title').focus();
+});
+el('ritual-signature').addEventListener('input',()=>{journey.ritual!.signature=el<HTMLInputElement>('ritual-signature').value;el('ritual-error').textContent='';});
+el('ritual-back').addEventListener('click',()=>{ritualStep=Math.max(0,ritualStep-1);showRitualStep();el('ritual-title').focus();});
+el('ritual-next').addEventListener('click',()=>{
+  if(ritualStep===0){journey.ritual!.laid=true;ritualStep=1;sound.found();showRitualStep(true);el('ritual-title').focus();}
+  else if(ritualStep===1){if(!journey.ritual!.lightKey){error('ritual-error','先选一盏想留下的灯。');return;}ritualStep=2;showRitualStep();el('ritual-signature').focus();}
+  else try{sealRitual(identity,journey);releasePreview();ritualDialog.close();lightsOut();}catch(e){error('ritual-error',e);el('ritual-signature').focus();}
+});
+el('ritual-close').addEventListener('click',()=>ritualDialog.close());
+ritualDialog.addEventListener('close',()=>{cancelAnimationFrame(ritualRaf);if(state==='waiting')animateWaiting();});
+document.addEventListener('visibilitychange',()=>{if(ritualDialog.open)paintRitual();});
 function saveFarewellNote(){
   try{const note=validateFarewellNote(el<HTMLTextAreaElement>('farewell-note').value);journey.farewellNote=note;el('farewell-note-error').textContent='';el('farewell-note-status').textContent=`${count(note)} / 120 字 · ${note?'已放进这次旅程，纪念票和回忆册会一起收好':'可留白'}`;el<HTMLButtonElement>('use-project-note').disabled=!identity.regret||Boolean(note);return true;}
   catch(e){error('farewell-note-error',e);return false;}

@@ -63,7 +63,7 @@
       <div id="leave-prompt" class="inline-prompt" hidden><p>返回项目页？本次关卡进度会重置。</p><div class="actions"><button id="keep-show" type="button">继续旅程</button><button id="leave-show" class="quiet" type="button">返回</button></div></div>
       <section id="departure-panel" class="departure-panel" hidden aria-label="到站后的告别"><p id="departure-memory"></p><p id="departure-choice" class="note"></p><p id="departure-voice" class="departure-voice" role="status"></p><div id="ceremony-controls" hidden><p id="ceremony-chapter" class="eyebrow"></p><progress id="ceremony-progress" max="1" value="0" aria-label="告别动画进度"></progress><button id="skip-ceremony" type="button" class="quiet">收好这一幕 →</button></div><article id="station-story" class="station-story" hidden aria-live="polite"><p id="station-story-topic" class="eyebrow"></p><h2 id="station-story-title"></h2><div id="station-story-lines"></div><small id="station-story-source"></small><button id="station-open-diary" type="button" class="quiet">翻开完整日记 →</button></article></section>
       <div id="station-intent-panel" class="farewell-card station-intent" hidden><label for="station-intent">到了站台，也可以换一种心意</label><select id="station-intent" aria-describedby="station-intent-note"></select><p id="station-intent-note" class="note" aria-live="polite"></p><details class="station-letter"><summary>留一封短信给它 <small>可留白 · 随纪念保存</small></summary><label for="farewell-note">走了这么久，最后想对它说什么？</label><textarea id="farewell-note" rows="3" aria-describedby="farewell-note-status" placeholder="谢谢你陪我走过这些年。"></textarea><p id="farewell-note-status" class="note" role="status">0 / 120 字 · 写下后会随这次旅程保留</p><button id="use-project-note" type="button" class="quiet">带上出发前写的心意</button><p id="farewell-note-error" class="error" role="alert"></p></details><small>关灯只是结束这次同行。想多坐一会儿，就先留在这里。</small></div>
-      <div id="lamp-controls" class="actions" hidden><button id="lamp" class="primary" type="button">关灯，今天先到这里</button></div>
+      <div id="lamp-controls" class="actions" hidden><button id="begin-ritual" class="primary" type="button">亲手完成这场告别</button><button id="lamp" type="button">关灯，今天先到这里</button></div>
     </section>
 
     <section id="input-panel" class="paper" aria-labelledby="input-title">
@@ -113,7 +113,7 @@
     </section>
 
     <section id="result-panel" class="result" aria-labelledby="result-title" hidden>
-      <nav class="page-tabs" aria-label="旅程纪念"><button type="button" data-result-page="ticket" aria-current="page">纪念票</button><button type="button" data-result-page="memories">回忆册</button><button type="button" data-result-page="project">项目原件</button></nav>
+      <nav class="page-tabs" aria-label="旅程纪念"><button type="button" data-result-page="ticket" aria-current="page">纪念票</button><button type="button" data-result-page="memories">回忆册</button><button type="button" data-result-page="project">项目原件</button><button id="ritual-tab" type="button" data-result-page="ritual" hidden>告别记</button></nav>
       <span class="eyebrow">同行纪念票</span><h2 id="result-title">今天先到这里</h2><p id="result-name"></p><p id="result-intent" class="note"></p><p id="journey-stats" class="note"></p>
       <div id="result-ticket" class="result-page"><img id="memorial-preview" alt="你和项目幽灵在夜间站台的告别纪念票" hidden>
       <aside id="result-letter" class="farewell-letter" hidden><small>你留给项目的短信</small><p id="result-letter-text"></p></aside><p id="ending-choice" class="ending-choice" hidden></p>
@@ -121,6 +121,7 @@
       <div id="ending-step" class="future-note ending-step" hidden><small>带给下一程的一句话</small><p id="ending-step-text"></p></div>
       <div class="date-row"><label class="check"><input id="include-date" type="checkbox">写下这次告别的日期</label><label id="date-label" for="memorial-date" hidden>保留日期<input id="memorial-date" type="date" aria-label="纪念图日期"></label></div>
       </div>
+      <section id="result-ritual" class="result-page ritual-receipt" hidden><p class="eyebrow">烂尾事务所 · 亲手封存</p><h3>这一程，郑重收好</h3><div id="ritual-receipt"></div><p class="note">这是你的告别记录，不是项目完工证明。<br>保存纪念票或回忆册，也会保存这份落款。</p></section>
       <section id="result-project" class="result-page" hidden><h3>项目仍在这里</h3><div id="result-media"></div><details class="result-dossier"><summary>项目档案 / 更新日记</summary><div id="result-keywords" class="keyword-grid"></div></details></section>
       <section id="result-memories" class="result-page" hidden><div id="relic-collection" class="relic-collection" hidden></div><p id="album-empty" class="note">这次没有翻开的回忆，可以下一次再看。</p><details id="album-section" class="result-dossier" tabindex="-1" hidden open><summary>翻翻这一路的回忆</summary><div id="memory-album"></div></details></section>
       <p id="export-status" class="note" role="status">正在整理纪念画面…</p><p id="export-error" class="error" role="alert"></p>
@@ -130,6 +131,15 @@
     </section>
     <footer><span>一段小小的同行</span></footer>
   </main>
+  <dialog id="farewell-ritual" class="settings-dialog ritual-dialog" aria-labelledby="ritual-title">
+    <div class="settings-heading"><p id="ritual-progress" class="eyebrow" aria-live="polite"></p><button id="ritual-close" class="quiet" type="button">先回站台</button></div>
+    <h2 id="ritual-title" tabindex="-1"></h2>
+    <canvas id="ritual-canvas" width="384" height="180" aria-label="窗前的告别桌：未竟之事、纪念灯与落款纸"></canvas>
+    <section id="ritual-page-0"><p>不必把它说成完成了。把还没做的那一页折好，让它有一个停靠的地方。</p><blockquote id="ritual-unfinished"></blockquote><p class="note">这是对资料的承认，不会删除代码，也不替你关闭仓库。</p></section>
+    <section id="ritual-page-1" hidden><p>选一件真实留下的东西，为它点灯。没有选定的原件，也可以只为这些年的投入留一盏灯。</p><div id="ritual-lights" class="ritual-lights"></div></section>
+    <section id="ritual-page-2" hidden><p id="ritual-intent"></p><p id="ritual-kept"></p><label for="ritual-signature">为自己落款 <span class="hint">可不署名 · 最多 24 字</span></label><input id="ritual-signature" type="text" autocomplete="off" placeholder="名字、称呼，或当年用过的昵称"><p class="note">封存的是这次告别的记录。你的项目和以后作决定的自由都还在。</p></section>
+    <p id="ritual-error" class="error" role="alert"></p><div class="actions"><button id="ritual-back" type="button" hidden>上一步</button><button id="ritual-next" class="primary" type="button">折好这一页</button></div>
+  </dialog>
   <dialog id="game-settings" class="settings-dialog" aria-labelledby="settings-title">
     <form method="dialog"><div class="settings-heading"><h2 id="settings-title">按你的节奏</h2><button class="quiet" aria-label="关闭设置" type="submit">✕</button></div>
       <label class="setting-row"><span>声音<small>音乐与动作音效</small></span><input id="settings-sound" type="checkbox"></label>

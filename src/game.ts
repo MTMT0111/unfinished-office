@@ -1,3 +1,4 @@
+import type { Ritual } from './ritual.ts';
 export type Point = { x:number; y:number };
 export type Actor = 'you'|'ghost';
 export type Direction = 'up'|'down'|'left'|'right';
@@ -66,7 +67,7 @@ export function move(level:Level,b:Board,direction:Direction):Board|null{
   next.latched ||= tile(level,next.you)==='e';
   return next;
 }
-export type Journey = { visited:number[]; memories:number[]; steps:number; skipped:boolean; notes:Record<number,string>; resolution:'shelf'|'carry'|null; nextStep:string; bookmark?:number; citySecret?:boolean; farewellNote?:string; relics?:Record<number,{path:string;place:'keep'|'pass'|'rest'}> };
+export type Journey = { visited:number[]; memories:number[]; steps:number; skipped:boolean; notes:Record<number,string>; resolution:'shelf'|'carry'|null; nextStep:string; bookmark?:number; citySecret?:boolean; farewellNote?:string; relics?:Record<number,{path:string;place:'keep'|'pass'|'rest'}>; ritual?:Ritual };
 export const newJourney=():Journey=>({visited:[],memories:[],steps:0,skipped:false,notes:{},resolution:null,nextStep:''});
 
 /** A short, bounded search powers one-step hints, including recovery after a bad push. */

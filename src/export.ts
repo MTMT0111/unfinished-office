@@ -3,6 +3,7 @@ import { drawFarewell, drawKeepsake } from './scene.ts';
 import { levels, type Journey } from './game.ts';
 import { memoryBookHtml, rememberedPage, validateFarewellNote } from './memory.ts';
 import { destinationCaption } from './destination.ts';
+import {ritualLines} from './ritual.ts';
 
 export function localDate(now=new Date()):string{
   return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
@@ -28,7 +29,9 @@ export async function createMemorial(identity:Identity,date:string|null,journey:
   c.font=font(32);const title=wrap(c,frozen.facts.name.value,1008);
   const heroY=100+title.length*40;
   c.font=font(22);const letter=validateFarewellNote(record.farewellNote??''),letterLines=wrap(c,letter,1008);
-  canvas.height=heroY+650+180+(letter?65+letterLines.length*32:0);
+  const receiptY=heroY+650+180+(letter?65+letterLines.length*32:0);
+  c.font=font(20);const receipt=ritualLines(record).flatMap(line=>wrap(c,line,1008));
+  canvas.height=receiptY+(receipt.length?100+receipt.length*28:0);
   c.fillStyle='#eee1c5';c.fillRect(0,0,1152,canvas.height);c.textBaseline='top';c.textAlign='left';
   c.fillStyle='#263c4e';c.fillRect(0,0,1152,9);c.fillStyle='#8a7965';c.font=font(14);c.fillText('烂尾事务所 / 同行纪念票'+(frozen.demo?' · 演示':''),48,28);c.textAlign='right';c.fillText(destinationCaption(frozen.destination),1104,28);c.textAlign='left';
   c.fillStyle='#302c3c';c.font=font(32);title.forEach((line,i)=>c.fillText(line,48,63+i*40));
@@ -50,6 +53,7 @@ export async function createMemorial(identity:Identity,date:string|null,journey:
   }else{c.font=font(20);c.fillText(frozen.farewellIntent&&frozen.farewellIntent!=='undecided'?farewells[frozen.farewellIntent].finale:record.skipped?'今天先到这里。谢谢你来过。':'谢谢你，陪它走完这一程。',1104,y-10);}
   c.textAlign='left';c.font=font(13);c.fillStyle='#8a7965';c.fillText(`${record.visited.length} / 7 站 · ${record.memories.length} 件回忆${record.citySecret?' · 城市灯语已点亮':''}`,48,y+45);c.textAlign='right';c.fillText('ONE MORE LITTLE JOURNEY',1104,y+45);
   if(letter){c.textAlign='left';c.font=font(14);c.fillText('你留给项目的短信',48,y+90);c.fillStyle='#51483f';c.font=font(22);letterLines.forEach((line,i)=>c.fillText(line,48,y+120+i*32));}
+  if(receipt.length){c.textAlign='left';c.fillStyle='#8a7965';c.font=font(14);c.fillText('告别记 / 亲手封存 · 不代表项目完工',48,receiptY+4);c.fillStyle='#51483f';c.font=font(20);receipt.forEach((line,i)=>c.fillText(line,48,receiptY+38+i*28));}
   const blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error('图片暂时没有生成，请重试。')),'image/png'));
   return {blob,filename:safeFilename(frozen.facts.name.value)};
 }

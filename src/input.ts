@@ -7,6 +7,7 @@ export type Accessory = 'none' | 'bow' | 'hat';
 export type Field = 'name' | 'purpose' | 'completed' | 'unfinished' | 'reason';
 export const farewells = {
   undecided:{label:'暂不定义，先回看',description:'还舍不得，也可以只来坐一会儿。今天不必决定以后。',page:'想留下的这一页',placeholder:'比如：这些年，最想记住的是第一次收到用户的来信。',finale:'这一程的心意，留在这里。',action:'关灯，今天先到这里'},
+  release:{label:'未完成，也正式告别',description:'承认它还有未竟之处，也承认你曾认真投入。今天，为自己的这一程郑重落款。',page:'未完成，也值得留下的一页',placeholder:'比如：它没有走到原来的终点，但我记得那些认真做过的夜晚。',finale:'未完成的，就停在这里。认真走过的，值得被记住。',action:'关灯，和这一程正式告别'},
   completed:{label:'圆满收尾',description:'为自己走过的这一段庆祝。带走收获，也可以安心画上句号。',page:'值得珍藏的这一页',placeholder:'比如：用了很多年的人，终于说它帮上了忙。',finale:'这一段，值得好好庆祝。谢谢你。',action:'关灯，为这一段画句号'},
   pause:{label:'暂时休息',description:'先把时间还给自己。什么时候回来，可以以后再想。',page:'留给以后翻开的这一页',placeholder:'比如：我想记住一起熬夜的伙伴，现在先好好休息。',finale:'今天先歇一会儿。留下的，都还在。',action:'关灯，先歇一会儿'},
   handover:{label:'交给后来的人',description:'把自己的这一程收好。经验和心意，可以陪下一位继续走。',page:'留给后来人的这一页',placeholder:'比如：希望下一位记得，这个小功能曾帮到很多人。',finale:'这一程辛苦了。把接力棒交出去吧。',action:'关灯，把这一程交出去'},

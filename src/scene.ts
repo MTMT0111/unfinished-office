@@ -347,6 +347,10 @@ export function drawFarewell(c:CanvasRenderingContext2D,id:Identity,time:number,
   const sky=settled?1:cinematic?ease((film-.55)/.22):0;
   if(sky){
     if(intent==='completed')drawFireworks(c,settled?2.6:time,sky*.85);
+    else if(intent==='release'&&journey?.ritual?.sealed){
+      // These paper lights belong to the farewell, not to a claim of project completion.
+      for(let i=0;i<9;i++){const rise=settled?1:ease((film-.55-i*.02)/.35),x=27+i*41,y=108-rise*(45+(i*13)%40);c.save();c.globalAlpha=sky*.75;rect(c,x-2,y-2,10,13,'#655c49');rect(c,x,y,6,8,colors.gold);rect(c,x+2,y+5,2,3,colors.cream);c.restore();}
+    }
     else if(intent==='handover'){
       // Passing the light echoes handing the project to its next keeper.
       for(let i=0;i<7;i++){const lit=settled?1:ease((film-.55-i*.035)/.12);c.save();c.globalAlpha=lit*.85;const x=36+i*48,y=46-Math.sin(i/6*Math.PI)*22;rect(c,x,y,5,7,colors.gold);rect(c,x+1,y+2,3,3,colors.cream);rect(c,x+2,y+7,1,4,'#b08773');c.restore();}
