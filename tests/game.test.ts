@@ -61,9 +61,9 @@ test('关卡行李来自确认资料，遗憾只来自本人；书库选择不�
   assert.equal(chapterCargo(draft,3).source,'未说明');
   const id=confirmIdentity(draft,values,draft.prop,draft.palette,draft.accessory,'还没让第一个人用上它。');
   assert(chapterCargo(id,2).text.includes('静态天气卡片'));assert(chapterCargo(id,3).text.includes('静态天气卡片'));
-  assert.equal(chapterCargo(id,5).text,id.regret);assert.equal(chapterCargo(id,5).source,'你写下的遗憾');
+  assert.equal(chapterCargo(id,5).text,id.regret);assert.equal(chapterCargo(id,5).source,'你写下的心意');
   const journey={...newJourney(),visited:[5],resolution:'carry' as const},html=memoryBookHtml(id,journey,'data:image/png;base64,AAAA');
-  assert(html.includes('把这一页放进行李，留给下一程继续接手。'));assert(html.includes('还没让第一个人用上它。'));assert.equal(id.facts.unfinished.value,values.unfinished);
+  assert(html.includes('把这一页放进行李。可以带走收获，不必带走新的任务。'));assert(html.includes('还没让第一个人用上它。'));assert.equal(id.facts.unfinished.value,values.unfinished);
   assert(memoryBookHtml(id,newJourney(),'data:image/png;base64,AAAA').includes('还没让第一个人用上它。'));
   assert.throws(()=>confirmIdentity(draft,values,draft.prop,draft.palette,draft.accessory,'字'.repeat(121)),/120/);
 });
@@ -145,8 +145,8 @@ test('最后一幕明确告别项目；书架、下一站和 GitHub 终点都保
   const id=confirmIdentity(draft,values,draft.prop,draft.palette,draft.accessory);
   for(const resolution of ['shelf','carry'] as const){
     const story=memoryStory(id,6,{...newJourney(),resolution});
-    assert.equal(story.title,'和它说再见');assert.equal(story.scene,'夜间送别站 · 最后一幕');assert(story.lines.at(-1)!.includes('再见'));assert(story.lines.at(-1)!.includes(id.facts.name.value));
+    assert.equal(story.title,'和它说再见');assert.equal(story.scene,'夜间送别站 · 最后一幕');assert(story.lines.at(-1)!.includes('这次同行'));assert(story.lines.at(-1)!.includes(id.facts.name.value));
   }
   id.milestones=Array.from({length:6},(_,i)=>({sha:String(i+1).repeat(40),subject:`推进 ${i+1}`,date:'2026-01-01'}));
-  const final=memoryStory(id,6,{...newJourney(),visited:[0,1,2,3,4,5,6],resolution:'carry'});assert(!final.milestone);assert.equal(final.title,'和它说再见');assert(final.lines.at(-1)!.includes('再见'));assert(final.lines.at(-1)!.includes(id.facts.name.value));assert(final.lines[0].includes('推进 5'));assert(!final.lines.join('').includes('推进 6'));
+  const final=memoryStory(id,6,{...newJourney(),visited:[0,1,2,3,4,5,6],resolution:'carry'});assert(!final.milestone);assert.equal(final.title,'和它说再见');assert(final.lines.at(-1)!.includes('这次同行'));assert(final.lines.at(-1)!.includes(id.facts.name.value));assert(final.lines[0].includes('推进 5'));assert(!final.lines.join('').includes('推进 6'));
 });

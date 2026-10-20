@@ -1,4 +1,4 @@
-import { confirmIdentity, count, example, fields, parseInput, readProjectFile, sourceLabel, type Identity, type Field, type Prop, type Palette, type Accessory } from './input.ts';
+import { confirmIdentity, count, example, fields, farewells, parseFarewellIntent, parseInput, readProjectFile, sourceLabel, type Identity, type Field, type Prop, type Palette, type Accessory } from './input.ts';
 import { choiceOf, corneredBoxes, directions, goals, levels, move, newBoard, newJourney, positions, same, solve, tile, won, type Actor, type Board, type Direction, type Point } from './game.ts';
 import { CELL, HEIGHT, OX, OY, WIDTH, drawScene, drawOpening, drawFarewell, drawRecollection, drawKeepsake, ease, type Motion, type Pulse, type StationRipple } from './scene.ts';
 import { renderDossier } from './dossier.ts';
@@ -84,7 +84,7 @@ function refreshGame(){
   el('control-help').textContent=coop?'两人同屏：玩家一用 WASD，玩家二用方向键，各自控制一个角色。Z 撤销，Y 重做。也可点角色后点相邻格，或在画面上滑动。你能推箱；幽灵能过水、走过灯芯点灯。金框放箱子，金色脚印给你，绿色脚印给幽灵。两人到齐、灯全亮才过关。书库的书架和行李格任选一个。':'方向键 / WASD 移动，X 换人，Z 撤销，Y 重做。也可点方向按钮、相邻格子，或在画面上滑动。你能推箱；幽灵能过水、走过灯芯点灯。金框放箱子，金色脚印给你，绿色脚印给幽灵。两人到齐、灯全亮才过关。书库的书架和行李格任选一个。';
   const memory=levelIndex<5?identity.milestones?.[levelIndex]:undefined;
   el('chapter-number').textContent=memory?`${memory.date} · 日记页 ${String(levelIndex+1).padStart(2,'0')}`:level.subtitle;el('chapter-title').textContent=memory?memory.subject:level.title;
-  el('game-objective').textContent=memory?'把这次更新的文件送进金框，再和伙伴一起到出口。':levelIndex===5?'替未完成的一页选个去处，再一起离开。':levelIndex===6?'收好最后一件行李，点亮站灯，再一起到站。':level.hint;
+  el('game-objective').textContent=memory?'把这次更新的文件送进金框，再和伙伴一起到出口。':levelIndex===5?`替「${farewells[identity.farewellIntent??'undecided'].page}」选个去处，再一起离开。`:levelIndex===6?'收好最后一件行李，点亮站灯，再一起到站。':level.hint;
   el('active-character').textContent=board.active==='you'?'你':'项目幽灵';
   el('switch-character').setAttribute('aria-label',`切换为${board.active==='you'?'项目幽灵':'你'}，快捷键 X`);
   el('memory-indicator').textContent=(memory?memory.sha.slice(0,7):keepsakes[levelIndex].name)+(board.found?' · 已收好':' · 找找看');
@@ -122,7 +122,7 @@ function refreshGame(){
     button.dataset.selected=String(stationStoryIndex===i);
     button.setAttribute('aria-current',i===levelIndex&&!['waiting'].includes(state)?'step':'false');
     button.setAttribute('aria-pressed',String(stationStoryIndex===i));
-    button.setAttribute('aria-label',`${commit?`${commit.date} · ${commit.subject} · 项目线索：${topic.text}`:i===5?'未完成内容的去处':i===6?'和项目告别':topic.text} · ${journey.visited.includes(i)?['waiting','done'].includes(state)?'点击在站台回看这个故事':'翻开回忆':'走完这一站后翻开'}${journey.bookmark===i?' · 已夹书签':''}`);
+    button.setAttribute('aria-label',`${commit?`${commit.date} · ${commit.subject} · 项目线索：${topic.text}`:i===5?'纪念页的去处':i===6?'和项目告别':topic.text} · ${journey.visited.includes(i)?['waiting','done'].includes(state)?'点击在站台回看这个故事':'翻开回忆':'走完这一站后翻开'}${journey.bookmark===i?' · 已夹书签':''}`);
     button.title=button.getAttribute('aria-label')!;
   }
   const coords=(p:{x:number;y:number})=>`${p.x} 列 ${p.y} 行`;
@@ -181,6 +181,13 @@ function setState(next:State){
     el('departure-memory').textContent=words.memory;el('departure-choice').textContent=words.choice;
     el('departure-voice').textContent='列车已经出发。行李还在这里，可以再翻一页。';
   }
+  const farewell=farewells[identity.farewellIntent??'undecided'];
+  el('station-intent-panel').hidden=next!=='waiting';
+  el<HTMLSelectElement>('station-intent').value=identity.farewellIntent??'undecided';
+  el('station-intent-note').textContent=farewell.description;
+  el('lamp').textContent=farewell.action;
+  el('lamp-hotspot').setAttribute('aria-label',farewell.action);
+  if(next==='done'){el('result-title').textContent=farewell.label;el('result-intent').textContent=farewell.finale;}
 }
 function resize(){
   const width=el('stage-wrap').parentElement!.clientWidth;
@@ -199,6 +206,8 @@ function enterConfirm(next:Identity){
   if(!ctx){error('input-error','当前浏览器无法绘制像素舞台。请换个浏览器重试，输入仍会保留。');return;}
   draft=next;identity=structuredClone(next);
   el<HTMLTextAreaElement>('project-regret').value=draft.regret??'';
+  el<HTMLSelectElement>('farewell-intent').value=draft.farewellIntent??'undecided';
+  updateIntentPreview();
   for(const key of fields){edits[key].value=draft.facts[key].value;el('source-'+key).textContent=sourceLabel(draft,draft.facts[key])+(draft.facts[key].source==='analysis'?' · '+draft.facts[key].evidence:'');}
   prop.value=draft.prop;palette.value=draft.palette;accessory.value=draft.accessory;
   el('confirm-error').textContent='';
@@ -209,6 +218,21 @@ function enterConfirm(next:Identity){
   if(draft.review){for(const item of draft.review.items){const p=document.createElement('p'),small=document.createElement('small');p.textContent=item.text;small.textContent=item.evidence;small.className='source';p.append(small);el('review-content').append(p);}for(const limit of draft.review.limits){const p=document.createElement('p');p.className='note';p.textContent=limit;el('review-content').append(p);}}
   setState('confirm');draw();el('confirm-panel').scrollIntoView({block:'start',behavior:'instant'});el('start').focus({preventScroll:true});
 }
+function updateIntentPreview(){
+  const intent=parseFarewellIntent(el<HTMLSelectElement>('farewell-intent').value),copy=farewells[intent];
+  el('farewell-intent-note').textContent=copy.description;
+  el<HTMLTextAreaElement>('project-regret').placeholder=copy.placeholder;
+}
+for(const id of ['farewell-intent','station-intent']){
+  const select=el<HTMLSelectElement>(id);
+  for(const [value,copy] of Object.entries(farewells)){const option=document.createElement('option');option.value=value;option.textContent=copy.label;select.append(option);}
+}
+el('farewell-intent').addEventListener('change',updateIntentPreview);
+el('station-intent').addEventListener('change',()=>{
+  if(state!=='waiting')return;
+  identity.farewellIntent=parseFarewellIntent(el<HTMLSelectElement>('station-intent').value);
+  setState('waiting');if(stationStoryIndex!==undefined)showStationStory(stationStoryIndex,false);draw();
+});
 for(const key of fields)edits[key].addEventListener('input',()=>{
   el('source-'+key).textContent=edits[key].value.trim()===draft.facts[key].value?sourceLabel(draft,draft.facts[key]):edits[key].value.trim()?'你填写的信息':'未说明';
   try{const current=confirmIdentity(draft,Object.fromEntries(fields.map(k=>[k,edits[k].value])) as Record<Field,string>,prop.value,palette.value,accessory.value);renderDraftDossier(current);}catch{/* Full validation runs on submit. */}
@@ -268,14 +292,14 @@ function tick(now:number){
       {at:3.2,text:count?`桌上有 ${count} 次已选中的提交；没有取到的经过，就留白。`:'这份资料没有 Git 提交记录，我们不替它补写过去。'},
       {at:5.5,text:'前五站会翻看提交与项目线索；每一页都能打开原始依据。'},
       {at:7.7,text:'你搬运行李，伙伴穿过水道踩住机关，再替走过的路点灯。'},
-      {at:10,text:'到书库时，亲手决定还没写完的那一页放在哪里。'},
+      {at:10,text:'到书库时，亲手决定想留下的那一页放在哪里。'},
       {at:11.8,text:'最后一起到站。关掉灯，让伙伴带着这段同行启程。'},
     ]:[
       {at:1.6,text:'夜雨落在事务所的窗上，桌面还亮着一盏灯。'},
-      {at:3.8,text:'门外有个项目伙伴，带着做过的事，也带着尚未写完的部分。'},
+      {at:3.8,text:'门外有个项目伙伴，带着做过的事，也带着一起走过的日子。'},
       {at:6,text:'桌上先留出七站的位置；等你带来项目，再把真实资料放进日记。'},
       {at:8.4,text:'路上要搬运行李、开一扇门，也要替同伴点亮两盏灯。'},
-      {at:10.8,text:'走到书库，你来决定那页留白；最后再亲手关灯。'},
+      {at:10.8,text:'走到书库，你来决定纪念页的去处；最后再亲手关灯。'},
     ];
     el('opening-line').textContent=lines.filter(line=>elapsed>=line.at).at(-1)?.text??'夜班刚刚亮灯。';
     draw();if(elapsed>=(openingJourney?13.4:12.4)){completeOpening();return;}raf=requestAnimationFrame(tick);return;
@@ -310,7 +334,7 @@ function start(){
 }
 el('confirm-form').addEventListener('submit',event=>{
   event.preventDefault();if(state!=='confirm')return;
-  try{identity=confirmIdentity(draft,Object.fromEntries(fields.map(k=>[k,edits[k].value])) as Record<Field,string>,prop.value,palette.value,accessory.value,el<HTMLTextAreaElement>('project-regret').value);start();}
+  try{identity=confirmIdentity(draft,Object.fromEntries(fields.map(k=>[k,edits[k].value])) as Record<Field,string>,prop.value,palette.value,accessory.value,el<HTMLTextAreaElement>('project-regret').value,el<HTMLSelectElement>('farewell-intent').value);start();}
   catch(e){error('confirm-error',e);}
 });
 el('skip-opening').addEventListener('click',()=>{if(state!=='opening')return;stopClock();const journeyIntro=openingJourney;completeOpening();if(journeyIntro)stage.focus({preventScroll:true});else el('sample-weather').focus({preventScroll:true});});
@@ -341,6 +365,7 @@ function memoryText(){
   el('memory-keepsake').textContent=memoryIndex===5&&journey.resolution?resolutionText[journey.resolution]:story.milestone?'一起回看，这次真实留下的变化。':journey.memories.includes(memoryIndex)?keepsakes[memoryIndex].caption:'这一格，先留白';
   el('future-note').hidden=memoryIndex!==6||journey.resolution!=='carry';
   el('future-context').textContent=chapterCargo(identity,5).source==='未说明'?'':chapterCargo(identity,5).text;
+  el<HTMLTextAreaElement>('memory-note').placeholder=memoryIndex>=5?'这些年，想感谢谁？哪件做成的事，让你觉得值得？也可以先留白。最多 120 字。':'那天你在做什么？有什么是提交记录没写下的？最多 120 字。';
   stage.setAttribute('aria-label',memoryIndex===6?`最后一站：你和「${identity.facts.name.value}」的项目幽灵在站台好好告别。`:`${story.title}。夜间事务所里，你和项目幽灵一起看着它的随身物件。`);
 }
 function openMemory(index:number,returnTo:typeof memoryReturn){
@@ -364,7 +389,7 @@ el('memory-continue').addEventListener('click',()=>{
   }
   if(levelIndex===levels.length-1){waiting();return;}
   levelIndex++;board=newBoard(levels[levelIndex]);history=[];future=[];motion=undefined;pickupAt=undefined;pulses=[];selectedParcel=undefined;queued=[];hintPoint=undefined;entered=elapsed;
-  setState('playing');el('game-status').textContent=levelIndex<5&&identity.milestones?.[levelIndex]?`伙伴：这是 ${identity.milestones[levelIndex].date} 的更新。`:levelIndex===5?'伙伴：最后，替没完成的那页选个去处。':'伙伴：送我到站台吧。';draw();stage.focus({preventScroll:true});
+  setState('playing');el('game-status').textContent=levelIndex<5&&identity.milestones?.[levelIndex]?`伙伴：这是 ${identity.milestones[levelIndex].date} 的更新。`:levelIndex===5?'伙伴：值得记住的，也可以留在这一页。':'伙伴：送我到站台吧。';draw();stage.focus({preventScroll:true});
 });
 el('memory-back').addEventListener('click',()=>{if(state==='memory'&&saveMemoryNote()){setState('cleared');draw();el('undo').focus({preventScroll:true});}});
 el('bookmark-memory').addEventListener('click',()=>{

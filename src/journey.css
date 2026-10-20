@@ -157,6 +157,11 @@
 #bag-items{grid-template-columns:repeat(7,minmax(0,52px))}
 .cover-route li::before{transition:background .22s,border-color .22s,box-shadow .22s}
 .cover-route li[data-progress=complete]{color:#a7d8c8}
+.cover-heart{color:#adc0ca;font-size:13px;line-height:1.9;margin:12px 0 22px}
+#app:not([data-state=input]) .cover-heart{display:none}
+.farewell-card{margin:0 0 24px;padding:18px 20px;border:1px solid #52665f;border-radius:8px;background:linear-gradient(135deg,#263c3a,#202c3d);text-align:left}
+.farewell-card label{margin-top:0;color:#eee1c5}.farewell-card select{width:100%;min-height:48px;cursor:pointer}.farewell-card small{color:#b2c5bf;font-size:11px;line-height:1.8}.intent-response{font-size:14px;line-height:1.9;color:#ebd3a5;margin:14px 0 8px;min-height:54px}.station-intent{max-width:540px;margin:20px auto 12px}
+@media(max-width:620px){.farewell-card{padding:16px}.station-intent{margin:18px 12px}}
 .cover-route li[data-progress=complete]::before{border-color:#86c7ae;background:#86c7ae}
 .cover-route li[data-progress=current]{color:#f0d49f}
 .cover-route li[data-progress=current]::before{border-color:#efc785;background:#efc785;box-shadow:0 0 9px #efc78566}

@@ -4,6 +4,17 @@ export type Prop = 'umbrella' | 'screen' | 'manuscript' | 'draft' | 'camera' | '
 export type Palette = 'cream' | 'lavender' | 'mint';
 export type Accessory = 'none' | 'bow' | 'hat';
 export type Field = 'name' | 'purpose' | 'completed' | 'unfinished' | 'reason';
+export const farewells = {
+  undecided:{label:'暂不定义，先回看',description:'还舍不得，也可以只来坐一会儿。今天不必决定以后。',page:'想留下的这一页',placeholder:'比如：这些年，最想记住的是第一次收到用户的来信。',finale:'这一程的心意，留在这里。',action:'关灯，今天先到这里'},
+  completed:{label:'圆满收尾',description:'为自己走过的这一段庆祝。带走收获，也可以安心画上句号。',page:'值得珍藏的这一页',placeholder:'比如：用了很多年的人，终于说它帮上了忙。',finale:'这一段，值得好好庆祝。谢谢你。',action:'关灯，为这一段画句号'},
+  pause:{label:'暂时休息',description:'先把时间还给自己。什么时候回来，可以以后再想。',page:'留给以后翻开的这一页',placeholder:'比如：我想记住一起熬夜的伙伴，现在先好好休息。',finale:'今天先歇一会儿。留下的，都还在。',action:'关灯，先歇一会儿'},
+  handover:{label:'交给后来的人',description:'把自己的这一程收好。经验和心意，可以陪下一位继续走。',page:'留给后来人的这一页',placeholder:'比如：希望下一位记得，这个小功能曾帮到很多人。',finale:'这一程辛苦了。把接力棒交出去吧。',action:'关灯，把这一程交出去'},
+};
+export type FarewellIntent = keyof typeof farewells;
+export function parseFarewellIntent(value:string):FarewellIntent {
+  if(!Object.hasOwn(farewells,value))throw new Error('请重新选择这次同行的心意。');
+  return value as FarewellIntent;
+}
 export type GitChange = { path:string; status:string; patch:string; truncated:boolean };
 export type GitMilestone = {
   sha:string; subject:string; date:string; committedAt?:string; author?:string; coauthors?:string[]; repository?:string;
@@ -17,6 +28,7 @@ export type Identity = {
   palette: Palette;
   accessory: Accessory;
   regret?: string;
+  farewellIntent?: FarewellIntent;
   keywords?: { text:string; evidence:string; category:'purpose'|'built'|'next'|'tech' }[];
   milestones?: GitMilestone[];
   review?: { summary: string; items: { text:string; evidence:string }[]; limits:string[] };
@@ -59,11 +71,12 @@ export function parseInput(name: string, text: string, source: Source = 'user'):
   return { demo:false, facts:values, prop:suggestProp(name + ' ' + text), palette:'cream', accessory:'none' };
 }
 
-export function confirmIdentity(draft: Identity, edits: Record<Field, string>, prop: string, palette: string, accessory: string, regret=draft.regret??''): Identity {
+export function confirmIdentity(draft: Identity, edits: Record<Field, string>, prop: string, palette: string, accessory: string, regret=draft.regret??'', farewellIntent:string=draft.farewellIntent??'undecided'): Identity {
   if (!['umbrella','screen','manuscript','draft','camera','sprout','record'].includes(prop) || !['cream','lavender','mint'].includes(palette) || !['none','bow','hat'].includes(accessory)) throw new Error('请重新选择道具、颜色和配件。');
   const result = structuredClone(draft);
-  if(count(regret.trim())>120)throw new Error('这句遗憾请留在 120 字以内。');
+  if(count(regret.trim())>120)throw new Error('这句话请留在 120 字以内。');
   result.regret=regret.trim();
+  result.farewellIntent=parseFarewellIntent(farewellIntent);
   for (const key of fields) {
     const value = edits[key].trim();
     const max = key === 'name' ? 40 : 240;
@@ -113,15 +126,15 @@ export function memorialDetail(identity: Identity): { text: string; source: stri
 }
 
 export function fiction(identity: Identity): { protest: string; finale: string; epitaph: string } {
-  if (identity.prop === 'umbrella') return { protest:'预报说，我明天还能上线。', finale:'最后一次预报：局部放晴。', epitaph:'它预报过一个尚未到来的晴天。' };
-  if (identity.prop === 'camera') return { protest:'底片还没来得及冲洗。', finale:'最后一张，留给出发之前。', epitaph:'它认真看过这个世界一眼。' };
-  if (identity.prop === 'sprout') return { protest:'再多等一天，说不定就发芽。', finale:'替它浇下最后一滴水。', epitaph:'留给明天的一颗小种子。' };
-  if (identity.prop === 'record') return { protest:'最后一首还没有播放完。', finale:'把最后的旋律转给你。', epitaph:'这一小段旋律，仍在耳边。' };
+  if (identity.prop === 'umbrella') return { protest:'预报说，我明天还能上线。', finale:'这一刻的预报：局部放晴。', epitaph:'它预报过一个尚未到来的晴天。' };
+  if (identity.prop === 'camera') return { protest:'底片还没来得及冲洗。', finale:'这一张，留给同行的我们。', epitaph:'它认真看过这个世界一眼。' };
+  if (identity.prop === 'sprout') return { protest:'再多等一天，说不定就发芽。', finale:'这颗小芽，留给下一段路。', epitaph:'留给明天的一颗小种子。' };
+  if (identity.prop === 'record') return { protest:'最后一首还没有播放完。', finale:'把这一程的旋律留给你。', epitaph:'这一小段旋律，仍在耳边。' };
   if (identity.prop === 'manuscript') return identity.demo && identity.facts.completed.value === '第一至第三章已有初稿。' && identity.facts.unfinished.value === '第四章只有标题，没有正文。'
     ? { protest:'第四章只是还没选好开头。', finale:'前三章，请签收。', epitaph:'前三章已送达，第四章暂缓投递。' }
     : { protest:'句号可以晚一点再写吗？', finale:'这份记录，请收好。', epitaph:'故事停在这里，留下的仍可翻阅。' };
-  if (identity.prop === 'screen') return { protest:'后台还有一个梦想没退出。', finale:'这一次，至少亮了一下。', epitaph:'屏幕熄了，那一点光曾经亮过。' };
-  return { protest:'死亡状态能改成战略休眠吗？', finale:'只是一个想法，也认真鞠个躬。', epitaph:'尚未落成的构想，也留下一格。' };
+  if (identity.prop === 'screen') return { protest:'后台还有一个梦想没退出。', finale:'一起亮过的光，留在这里。', epitaph:'屏幕熄了，那一点光曾经亮过。' };
+  return { protest:'今天可以先在这里歇一会儿吗？', finale:'这个念头，也值得好好珍藏。', epitaph:'留下的构想，也值得珍藏。' };
 }
 
 export function safeFilename(name: string): string {

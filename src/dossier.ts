@@ -2,7 +2,7 @@ import { sourceLabel, type Identity, type Field } from './input.ts';
 import { commitEvidence, diaryLines } from './journal.ts';
 
 export type Keyword = { text:string; evidence:string; category:'purpose'|'built'|'next'|'tech' };
-export const categoryNames={purpose:'想做什么',built:'已经留下',next:'还没写完',tech:'使用技术'};
+export const categoryNames={purpose:'想做什么',built:'已经留下',next:'资料中的待办',tech:'使用技术'};
 const fieldFor={purpose:'purpose',built:'completed',next:'unfinished'} as const;
 
 export function dossier(identity:Identity):Keyword[]{

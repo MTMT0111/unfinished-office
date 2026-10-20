@@ -2,13 +2,48 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {normalizeMilestones,suggestedMilestones,commitUrl} from '../src/project.ts';
 import {parseAnalysis,validateProject} from '../src/analysis.ts';
-import {example,fiction} from '../src/input.ts';
+import {confirmIdentity,example,farewells,fiction,fields,parseFarewellIntent,type Field} from '../src/input.ts';
 import {chapterCargo,keepsakeStory,keepsakeTopic,memoryStory,memoryBookHtml,parcelContents,rememberedPage,farewellLines} from '../src/memory.ts';
 import {newJourney} from '../src/game.ts';
 import {recalledKeepsake} from '../src/scene.ts';
 
 const sha='a'.repeat(40),other='b'.repeat(40);
 const commit={sha,commit:{message:'增加城市输入检查\n\nCo-authored-by: Lin <private@example.com>',author:{name:'Wen'},committer:{date:'2026-02-03T08:00:00Z'}},files:[{filename:'src/city.ts',status:'modified',patch:'-return search(city);\n+if (!city.trim()) return showHint("请输入城市");\n+return search(city);'},{filename:'.env',patch:'SECRET'},{filename:'src/key.ts',patch:'api_key="sk-synthetic1234567890"'}]};
+test('告别心意只由本人选择；收尾、休息、交接收好成果，不把旧待办当新任务',()=>{
+  const draft=example('weather'),values=Object.fromEntries(fields.map(k=>[k,draft.facts[k].value])) as Record<Field,string>;
+  const original=structuredClone(draft),journey={...newJourney(),visited:[5,6],memories:[5],bookmark:5,resolution:'carry' as const};
+  for(const intent of ['completed','pause','handover'] as const){
+    const id=confirmIdentity(draft,values,draft.prop,draft.palette,draft.accessory,'',intent);
+    assert.equal(id.facts.unfinished.value,draft.facts.unfinished.value);
+    assert.equal(chapterCargo(id,5).detail,values.completed);
+    assert.equal(parcelContents(id,6,1,true)[0].text,chapterCargo(id,5).text);
+    assert.equal(rememberedPage(id,journey)?.title,values.completed);
+    assert(!memoryStory(id,5,journey).lines.join('').includes(values.unfinished));
+    assert(farewellLines(id,journey).signal.includes(farewells[intent].finale));
+    const html=memoryBookHtml(id,journey,'data:image/png;base64,AAAA');
+    assert(html.includes(farewells[intent].label));assert(html.includes(values.unfinished),'原始资料仍可回看');
+    assert(html.includes('不必带走新的任务'));
+  }
+  assert.deepEqual(draft,original);
+  assert.throws(()=>confirmIdentity(draft,values,draft.prop,draft.palette,draft.accessory,'','constructor'),/重新选择/);
+  assert.throws(()=>parseFarewellIntent('__proto__'),/重新选择/);
+  assert.equal(confirmIdentity(draft,values,draft.prop,draft.palette,draft.accessory).farewellIntent,'undecided');
+});
+test('改换告别心意保留个人留言、书签与便签；缺少成果时留白，不虚构多年成就',()=>{
+  const draft=example('weather'),values=Object.fromEntries(fields.map(k=>[k,draft.facts[k].value])) as Record<Field,string>;
+  const id=confirmIdentity(draft,values,draft.prop,draft.palette,draft.accessory,'<b>八年的陪伴，谢谢</b>','completed');
+  const journey={...newJourney(),visited:[5,6],bookmark:5,notes:{5:'给一起做过的人'},resolution:'carry' as const,nextStep:'记得休息'},before=structuredClone(journey);
+  for(const intent of ['completed','pause','handover','undecided'] as const){
+    id.farewellIntent=intent;
+    assert.equal(chapterCargo(id,5).text,id.regret);assert.equal(rememberedPage(id,journey)?.title,journey.notes[5]);
+    const html=memoryBookHtml(id,journey,'data:image/png;base64,AAAA');
+    assert(html.includes('&lt;b&gt;八年的陪伴，谢谢&lt;/b&gt;'));assert(!html.includes('<b>八年的'));assert(html.includes('记得休息'));
+  }
+  assert.deepEqual(journey,before);
+  const blank=confirmIdentity(draft,{...values,completed:''},draft.prop,draft.palette,draft.accessory,'','completed');
+  assert.equal(chapterCargo(blank,5).source,'未说明');assert(memoryStory(blank,5,newJourney()).empty);
+  assert.equal(rememberedPage(blank,{...newJourney(),visited:[5],bookmark:5}),null);
+});
 test('书签只保留已走过且有内容的回忆，不能自动替玩家选择',()=>{
   const identity=example('weather');identity.milestones=normalizeMilestones([commit]);
   const journey={...newJourney(),visited:[0]};

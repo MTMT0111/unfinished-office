@@ -1,4 +1,4 @@
-import { memorialDetail, safeFilename, type Identity } from './input.ts';
+import { farewells, memorialDetail, safeFilename, type Identity } from './input.ts';
 import { drawFarewell, drawKeepsake } from './scene.ts';
 import { levels, type Journey } from './game.ts';
 import { memoryBookHtml, rememberedPage } from './memory.ts';
@@ -28,7 +28,7 @@ export async function createMemorial(identity:Identity,date:string|null,journey:
   const heroY=70+title.length*40;
   canvas.height=heroY+720+110;
   c.fillStyle='#eee1c5';c.fillRect(0,0,1152,canvas.height);c.textBaseline='top';c.textAlign='left';
-  c.fillStyle='#8a7965';c.font=font(14);c.fillText('烂尾事务所'+(frozen.demo?' · 演示':''),48,20);c.textAlign='right';if(date)c.fillText(date.replace(/-/g,'.'),1104,20);c.textAlign='left';
+  c.fillStyle='#8a7965';c.font=font(14);c.fillText('烂尾事务所'+(frozen.demo?' · 演示':'')+' · '+farewells[frozen.farewellIntent??'undecided'].label,48,20);c.textAlign='right';if(date)c.fillText(date.replace(/-/g,'.'),1104,20);c.textAlign='left';
   c.fillStyle='#302c3c';c.font=font(32);title.forEach((line,i)=>c.fillText(line,48,49+i*40));
   c.imageSmoothingEnabled=false;c.drawImage(scene,0,heroY,1152,720);
   const y=heroY+766;
@@ -42,7 +42,7 @@ export async function createMemorial(identity:Identity,date:string|null,journey:
   if(page){
     c.font=font(13);c.fillText('想留下的这一页',1104,y-26);
     c.font=font(20);const lines=wrap(c,page.title,590);c.fillText(lines[0]+(lines.length>1?'…':''),1104,y-5);
-  }else{c.font=font(20);c.fillText(record.skipped?'今天先到这里。谢谢你来过。':'谢谢你，陪它走完这一程。',1104,y-10);}
+  }else{c.font=font(20);c.fillText(frozen.farewellIntent&&frozen.farewellIntent!=='undecided'?farewells[frozen.farewellIntent].finale:record.skipped?'今天先到这里。谢谢你来过。':'谢谢你，陪它走完这一程。',1104,y-10);}
   const blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error('图片暂时没有生成，请重试。')),'image/png'));
   return {blob,filename:safeFilename(frozen.facts.name.value)};
 }
