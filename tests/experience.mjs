@@ -17,7 +17,7 @@ try{
   await page.waitForFunction(()=>document.querySelectorAll('#project-media img').length===1);await shot('experience-project-originals');
   await page.locator('#project-photos').setInputFiles({name:'invalid.png',mimeType:'image/png',buffer:Buffer.from('invalid')});
   await page.waitForFunction(()=>!document.getElementById('project-photos').disabled);assert.equal(await page.locator('#project-media img').count(),1);assert((await page.locator('#photo-status').innerText()).length>0);
-  await page.locator('[data-preflight=heart]').click();await page.locator('#farewell-intent').selectOption('completed');
+  await page.locator('[data-preflight=heart]').click();await page.locator('#farewell-intent').selectOption('completed');await page.locator('#regret-details summary').click();await page.locator('#project-regret').fill('谢谢一起做项目的伙伴。');
   await page.locator('[data-preflight=scene]').click();await page.locator('#departure-city').fill('北京');await page.locator('#departure-season').selectOption('snow');await page.locator('#preview-city').click();assert((await page.locator('#destination-caption').innerText()).includes('北京'));await shot('experience-destination');
   await page.locator('#start').click();assert.equal(await state(),'playing');const initial=await board();
   const beijing=await page.locator('#stage').evaluate(c=>c.toDataURL());await page.locator('#parcel-list button').first().click();assert(await page.locator('#city-input').isVisible());await page.locator('#parcel-list button').first().click();await shot('experience-beijing');
@@ -32,17 +32,35 @@ try{
     assert.equal(positions.length,1,`画布应保持稳定：${width}px ${positions}`);assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     if(width===390)await shot('experience-game-mobile');
   }
-  await page.locator('#skip').click();await shot('experience-station');
+  await page.locator('#skip').click();
+  await page.locator('.station-letter summary').click();await page.locator('#use-project-note').click();assert.equal(await page.locator('#farewell-note').inputValue(),'谢谢一起做项目的伙伴。');
+  await page.locator('#farewell-note').fill('字'.repeat(121));await page.locator('#lamp').click();assert.equal(await state(),'waiting');assert((await page.locator('#farewell-note-error').innerText()).includes('120'));
+  await page.locator('#station-intent').selectOption('pause');assert.equal((await page.locator('#farewell-note').inputValue()).length,121);await page.locator('#station-intent').selectOption('completed');
+  const letter='谢谢你陪我走了十年。\n<这段经历>已经值得珍藏。';await page.locator('#farewell-note').fill(letter);await shot('experience-station');
   await page.locator('#open-settings').click();await page.locator('#settings-reduced').uncheck();await page.locator('#game-settings .primary').click();
   await page.locator('#lamp').click();await page.waitForTimeout(1900);assert.equal(await state(),'fading');await shot('experience-farewell-close');
   await page.waitForTimeout(5200);assert.equal(await state(),'fading');await shot('experience-farewell-wide');
   await page.waitForFunction(()=>document.getElementById('app').dataset.state==='done'&&!document.getElementById('download').disabled);
-  assert(await page.locator('.theatre').isHidden());await shot('experience-ticket');
+  assert(await page.locator('.theatre').isHidden());assert.equal(await page.locator('#result-letter-text').innerText(),letter);await shot('experience-ticket');
+  const stats=await page.locator('#journey-stats').innerText();await page.locator('#replay-ceremony').click();assert.equal(await state(),'fading');await page.locator('#skip-ceremony').click();assert.equal(await state(),'done');assert.equal(await page.locator('#journey-stats').innerText(),stats);assert.equal(await page.locator('#result-letter-text').innerText(),letter);
   for(const width of [320,390,1280]){await page.setViewportSize({width,height:900});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
   await page.locator('[data-result-page=project]').click();assert(await page.locator('#result-ticket').isHidden());assert.equal(await page.locator('#result-media img').count(),1);assert((await page.locator('#result-media pre').innerText()).includes('# 天气 App'));
   await page.locator('[data-result-page=memories]').click();assert(await page.locator('#album-empty').isVisible());
   const event=page.waitForEvent('download');await page.locator('#save-book').click();const download=await event;await download.saveAs(path.join(out,'experience-book.html'));
-  const html=fs.readFileSync(path.join(out,'experience-book.html'),'utf8');assert(html.includes('天气卡片-测试截图.png'));assert(html.includes('北京 · 瑞雪'));assert(html.includes('城市灯语已点亮'));assert(html.includes('# 天气 App'));
+  const html=fs.readFileSync(path.join(out,'experience-book.html'),'utf8');assert(html.includes('天气卡片-测试截图.png'));assert(html.includes('北京 · 瑞雪'));assert(html.includes('城市灯语已点亮'));assert(html.includes('# 天气 App'));assert(html.includes('&lt;这段经历&gt;已经值得珍藏。'));
   await page.locator('[data-result-page=ticket]').click();const pngEvent=page.waitForEvent('download');await page.locator('#download').click();await(await pngEvent).saveAs(path.join(out,'experience-ticket.png'));
   assert.deepEqual(errors,[]);console.log(JSON.stringify({checks:['README 原文和截图可浏览，坏图片不丢已有图片','分步骤确认与三个纪念页面','北京、纽约圣诞/万圣节、未知城市降级；换城保持棋盘','城市彩蛋解锁同行灯，灯光切换不移动人物','320/390/980/1280 px 连续帧画布与滚动位置稳定','9 秒近景、拉远、烟花完整告别；减动仍可游玩','图片、原文、城市、彩蛋随回忆册与纪念票导出'],errors},null,2));
+  for(const intent of ['pause','handover','undecided']){
+    await page.locator('#new-project').click();await page.locator('#sample-weather').click();
+    await page.locator('[data-preflight=heart]').click();await page.locator('#farewell-intent').selectOption(intent);
+    await page.locator('[data-preflight=scene]').click();await page.locator('#reduced').check();await page.locator('#start').click();await page.locator('#skip').click();
+    assert.equal(await page.locator('#farewell-note').inputValue(),'','新项目不带入上一封短信');
+    await page.locator('#open-settings').click();await page.locator('#settings-reduced').uncheck();await page.locator('#game-settings .primary').click();
+    await page.locator('#lamp').click();await page.waitForTimeout(6600);assert.equal(await state(),'fading');await shot('ceremony-'+intent);
+    if(intent==='undecided'){await page.locator('#open-settings').click();await page.locator('#settings-reduced').check();assert.equal(await state(),'done');await page.locator('#game-settings .primary').click();}
+    else await page.locator('#skip-ceremony').click();
+    assert.equal(await state(),'done');assert(await page.locator('#result-letter').isHidden());
+  }
+  await page.locator('#open-settings').click();await page.locator('#settings-reduced').check();await page.locator('#game-settings .primary').click();await page.locator('#replay-ceremony').click();assert.equal(await state(),'done','减动模式直接给出静态纪念');
+  assert.deepEqual(errors,[]);console.log('告别专项通过：四种心意、短信验证/导出、重看/跳过不改进度、减动静态结尾。');
 }catch(error){await shot('experience-failure');throw error;}finally{await browser.close();}

@@ -60,6 +60,9 @@ export function parcelContents(identity:Identity,index:number,total:number,carry
 export function validateNextStep(value:string):string {
   const text=value.trim();if(count(text)>60)throw new Error('这句便签，60 字以内就好。');return text;
 }
+export function validateFarewellNote(value:string):string {
+  const text=value.trim();if(count(text)>120)throw new Error('留给项目的这封短信，请写在 120 字以内。');return text;
+}
 export function recollection(identity:Identity,index:number,journey:Journey):{title:string;text:string;source:string;empty:boolean}{
   const title=index===5?farewells[identity.farewellIntent??'undecided'].page:memoryTitles[index],note=journey.notes[index]?.trim();
   if(note)return {title,text:note,source:'你写下的回忆',empty:false};
@@ -90,7 +93,7 @@ export function farewellLines(identity:Identity,journey:Journey):{memory:string;
     memory:page?`你想留下的这一页：「${page.title}」`:'这段路，我们先走到这里。',
     choice:journey.resolution==='carry'?(unfinished.source==='未说明'?'这一页，留给下一站。':`留给下一站：「${unfinished.text}」`):journey.resolution==='shelf'?(unfinished.source==='未说明'?'这一页，先留在书架。':`先收在书架：「${unfinished.text}」`):'还没决定的，可以慢慢想。',
     luggage,
-    signal:`留给「${identity.facts.name.value||'这个项目'}」：${identity.farewellIntent&&identity.farewellIntent!=='undecided'?farewells[identity.farewellIntent].finale:fiction(identity).finale}`,
+    signal:`留给「${identity.facts.name.value||'这个项目'}」：${journey.farewellNote|| (identity.farewellIntent&&identity.farewellIntent!=='undecided'?farewells[identity.farewellIntent].finale:fiction(identity).finale)}`,
     closing:journey.skipped?'今天先到这里。谢谢你来陪我。':farewells[identity.farewellIntent??'undecided'].finale,
   };
 }
@@ -129,6 +132,8 @@ export function memoryBookHtml(identity:Identity,journey:Journey,cover:string):s
   const originals=(identity.sourceFiles??[]).map(file=>`<details><summary>${escape(file.path)}</summary><div class="inside"><small>${file.truncated?'所选原文片段':'所选文件原文'}</small><pre>${escape(file.text)}</pre></div></details>`).join('');
   const photos=(identity.photos??[]).filter(photo=>/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(photo.src)).map(photo=>`<figure><img src="${photo.src}" alt="${escape(photo.name)}"><figcaption>${escape(photo.name)}</figcaption></figure>`).join('');
   const projectMedia=identity.facts.name.confirmed&&(originals||photos)?`<details><summary>带来的项目原件</summary><div class="inside">${photos}${originals}</div></details>`:'';
+  const letter=validateFarewellNote(journey.farewellNote??'');
+  const letterHtml=letter?`<aside class="bookmark"><small>你留给项目的短信</small><p>${escape(letter)}</p></aside>`:'';
   const remembered=rememberedPage(identity,journey);
   const bookmark=remembered?`<aside class="bookmark"><small>你想留下的这一页</small><p><a href="#memory-${remembered.index}">${escape(remembered.title)}</a></p><small>${escape((remembered.date?remembered.date+' · ':'')+remembered.source)}</small></aside>`:'';
   const labels={name:'名字',purpose:'最初的念头',completed:'已经留下',unfinished:'暂时留白',reason:'你留的话'};
@@ -142,5 +147,5 @@ export function memoryBookHtml(identity:Identity,journey:Journey,cover:string):s
 pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px;padding:10px;background:#182230}a{color:#9fd4ea}summary>span{min-width:0;overflow-wrap:anywhere}
 .bookmark{border-left:3px solid #efc785;background:#203246;padding:14px 18px;margin:20px 0}.bookmark p{font-size:16px}.bookmark a{text-decoration:none}.bookmark small{font-size:11px}
 *{box-sizing:border-box}body{margin:0;background:#171d2d;color:#eee1c5;font:16px/1.8 "Microsoft YaHei",sans-serif}main{max-width:768px;margin:auto;padding:32px 18px 64px}header{text-align:center;padding:8px 0 28px}h1{font-size:24px;font-weight:500;overflow-wrap:anywhere;margin:8px 0}small{font-size:11px;color:#a9b8bc}img{display:block;width:100%;image-rendering:pixelated;border-radius:6px}details{border:1px solid #48545c;border-radius:6px;margin:12px 0;background:#222c39}summary{cursor:pointer;min-height:64px;display:flex;align-items:center;gap:16px;padding:12px 18px;font-size:15px}summary small{margin-left:auto;white-space:nowrap}.number{color:#efc785;font-size:12px}.inside{padding:0 22px 20px}p,blockquote,dd{white-space:pre-wrap;overflow-wrap:anywhere}p{margin:4px 0}blockquote{margin:20px 0 4px;border-left:2px solid #efc785;padding-left:14px}.blank{color:#a9b8bc}footer{text-align:center;color:#a9b8bc;margin:28px 0;font-size:12px}dl{padding:0 22px 20px}dt{color:#8ec9b5;font-size:12px;margin-top:18px}dd{margin:3px 0 0}@media(max-width:400px){summary{gap:9px;padding:12px}summary small{font-size:10px}h1{font-size:20px}}@media print{body{background:white;color:#273340}details{break-inside:avoid;background:white}details::details-content{content-visibility:visible}summary{list-style:none}small,footer{color:#555}}
-</style><main><header><small>烂尾事务所 · 同行回忆册${identity.demo?' · 演示':''}</small><h1>${title}</h1><small>${journey.visited.length} / ${keepsakes.length} 站 · ${journey.memories.length} 件旅途物件${journey.skipped?' · 提前到站':''}</small></header><img src="${cover}" alt="项目幽灵登上末班车，你留在站台和行李道别"><aside class="bookmark"><small>这次同行的心意 · 由你选择</small><p>${farewells[identity.farewellIntent??"undecided"].label}</p><p>${farewells[identity.farewellIntent??"undecided"].description}</p></aside><p>${escape(destinationCaption(identity.destination))}${journey.citySecret?' · 城市灯语已点亮':''}</p>${bookmark}${pages||'<p class="blank">今天先到这里，也很好。</p>'}<details><summary>它留下的资料</summary><dl>${facts.map(k=>`<dt>${labels[k]}</dt><dd>${escape(identity.facts[k].value)}</dd><small>${escape(sourceLabel(identity,identity.facts[k]))}</small>`).join('')}${identity.regret?`<dt>你写下的心意</dt><dd>${escape(identity.regret)}</dd>`:''}</dl></details>${projectMedia}<footer>回忆已保存在这份文件里。离线打开，也能再翻一翻。<br>旅途物件是故事里的象征；项目经历来自你确认的资料与留言。</footer></main></html>`;
+</style><main><header><small>烂尾事务所 · 同行回忆册${identity.demo?' · 演示':''}</small><h1>${title}</h1><small>${journey.visited.length} / ${keepsakes.length} 站 · ${journey.memories.length} 件旅途物件${journey.skipped?' · 提前到站':''}</small></header><img src="${cover}" alt="项目幽灵登上末班车，你留在站台和行李道别"><aside class="bookmark"><small>这次同行的心意 · 由你选择</small><p>${farewells[identity.farewellIntent??"undecided"].label}</p><p>${farewells[identity.farewellIntent??"undecided"].description}</p></aside><p>${escape(destinationCaption(identity.destination))}${journey.citySecret?' · 城市灯语已点亮':''}</p>${letterHtml}${bookmark}${pages||'<p class="blank">今天先到这里，也很好。</p>'}<details><summary>它留下的资料</summary><dl>${facts.map(k=>`<dt>${labels[k]}</dt><dd>${escape(identity.facts[k].value)}</dd><small>${escape(sourceLabel(identity,identity.facts[k]))}</small>`).join('')}${identity.regret?`<dt>你写下的心意</dt><dd>${escape(identity.regret)}</dd>`:''}</dl></details>${projectMedia}<footer>回忆已保存在这份文件里。离线打开，也能再翻一翻。<br>旅途物件是故事里的象征；项目经历来自你确认的资料与留言。</footer></main></html>`;
 }

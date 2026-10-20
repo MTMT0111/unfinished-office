@@ -1,7 +1,7 @@
 import { farewells, memorialDetail, safeFilename, type Identity } from './input.ts';
 import { drawFarewell, drawKeepsake } from './scene.ts';
 import { levels, type Journey } from './game.ts';
-import { memoryBookHtml, rememberedPage } from './memory.ts';
+import { memoryBookHtml, rememberedPage, validateFarewellNote } from './memory.ts';
 import { destinationCaption } from './destination.ts';
 
 export function localDate(now=new Date()):string{
@@ -21,13 +21,14 @@ export async function createMemorial(identity:Identity,date:string|null,journey:
   await document.fonts.ready;
   const scene=document.createElement('canvas');scene.width=384;scene.height=240;
   const sc=scene.getContext('2d');if(!sc)throw new Error('浏览器暂时无法绘制图片，请重试。');
-  drawFarewell(sc,frozen,2,0,record,1);
+  drawFarewell(sc,frozen,2,0,record,1,undefined,[],2,true);
   const canvas=document.createElement('canvas');canvas.width=1152;
   const c=canvas.getContext('2d');if(!c)throw new Error('图片画布创建失败，请重试。');
   const font=(size:number)=>`${size}px "Microsoft YaHei", "PingFang SC", sans-serif`;
   c.font=font(32);const title=wrap(c,frozen.facts.name.value,1008);
   const heroY=100+title.length*40;
-  canvas.height=heroY+650+180;
+  c.font=font(22);const letter=validateFarewellNote(record.farewellNote??''),letterLines=wrap(c,letter,1008);
+  canvas.height=heroY+650+180+(letter?65+letterLines.length*32:0);
   c.fillStyle='#eee1c5';c.fillRect(0,0,1152,canvas.height);c.textBaseline='top';c.textAlign='left';
   c.fillStyle='#263c4e';c.fillRect(0,0,1152,9);c.fillStyle='#8a7965';c.font=font(14);c.fillText('烂尾事务所 / 同行纪念票'+(frozen.demo?' · 演示':''),48,28);c.textAlign='right';c.fillText(destinationCaption(frozen.destination),1104,28);c.textAlign='left';
   c.fillStyle='#302c3c';c.font=font(32);title.forEach((line,i)=>c.fillText(line,48,63+i*40));
@@ -48,6 +49,7 @@ export async function createMemorial(identity:Identity,date:string|null,journey:
     c.font=font(20);const lines=wrap(c,page.title,590);c.fillText(lines[0]+(lines.length>1?'…':''),1104,y-5);
   }else{c.font=font(20);c.fillText(frozen.farewellIntent&&frozen.farewellIntent!=='undecided'?farewells[frozen.farewellIntent].finale:record.skipped?'今天先到这里。谢谢你来过。':'谢谢你，陪它走完这一程。',1104,y-10);}
   c.textAlign='left';c.font=font(13);c.fillStyle='#8a7965';c.fillText(`${record.visited.length} / 7 站 · ${record.memories.length} 件回忆${record.citySecret?' · 城市灯语已点亮':''}`,48,y+45);c.textAlign='right';c.fillText('ONE MORE LITTLE JOURNEY',1104,y+45);
+  if(letter){c.textAlign='left';c.font=font(14);c.fillText('你留给项目的短信',48,y+90);c.fillStyle='#51483f';c.font=font(22);letterLines.forEach((line,i)=>c.fillText(line,48,y+120+i*32));}
   const blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error('图片暂时没有生成，请重试。')),'image/png'));
   return {blob,filename:safeFilename(frozen.facts.name.value)};
 }
@@ -55,6 +57,6 @@ export function createMemoryBook(identity:Identity,journey:Journey):{blob:Blob;f
   memorialDetail(identity);
   const canvas=document.createElement('canvas');canvas.width=768;canvas.height=480;
   const c=canvas.getContext('2d');if(!c)throw new Error('回忆画面没有生成，请重试。');
-  c.scale(2,2);c.imageSmoothingEnabled=false;drawFarewell(c,identity,2,0,journey,1);
+  c.scale(2,2);c.imageSmoothingEnabled=false;drawFarewell(c,identity,2,0,journey,1,undefined,[],2,true);
   return {blob:new Blob([memoryBookHtml(identity,journey,canvas.toDataURL('image/png'))],{type:'text/html;charset=utf-8'}),filename:safeFilename(identity.facts.name.value).replace(/^纪念-/,'回忆册-').replace(/\.png$/,'.html')};
 }

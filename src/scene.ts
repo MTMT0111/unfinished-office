@@ -265,17 +265,17 @@ export function drawOpening(c:CanvasRenderingContext2D,id:Identity,time:number,j
 }
 
 export function drawFarewell(c:CanvasRenderingContext2D,id:Identity,time:number,dark=0,journey?:Journey,departure=0,selected?:number,ripples:StationRipple[]=[],rippleTime=time,settled=false,cinematic=false){
-  const film=departure;
+  const film=departure,intent=id.farewellIntent??'undecided';
   if(cinematic){departure=Math.min(1,film/.68);dark=0;}
   c.save();
-  if(cinematic){const zoom=1.65-.65*ease((film-.42)/.45);c.translate(208,128);c.scale(zoom,zoom);c.translate(-208,-128);}
+  if(cinematic){const zoom=1+.48*ease(film/.12)*(1-ease((film-.42)/.45));c.translate(208,128);c.scale(zoom,zoom);c.translate(-208,-128);}
   rect(c,0,0,WIDTH,HEIGHT,'#1b233a');
   for(let i=0;i<50;i++)rect(c,(i*61+11)%384,(i*31+4)%130,1,1,'#8095a1');
   rect(c,296,25,26,26,'#d7d8bb');rect(c,291,30,36,16,'#d7d8bb');
   for(let i=0;i<14;i++)tree(c,i*32-12,136,45+i%3*11,'#2a4149');
   if(id.destination)drawCity(c,id.destination,time);
   for(let i=0;i<6;i++)rect(c,22+i*63+Math.sin(time*.6+i)*6,125+Math.cos(time+i)*9,1,2,i%2?'#829b8b':'#c4c690');
-  const trainLeave=54*ease((departure-.76)/.24);
+  const trainLeave=100*ease((departure-.76)/.24);
   c.save();c.translate(trainLeave,0);
   rect(c,296,94,96,73,'#27394d');rect(c,299,89,92,6,'#65727f');rect(c,301,101,85,56,'#3c4c5e');
   for(const x of [305,318,373]){rect(c,x,105,9,22,'#1c2a3d');rect(c,x+2,107,5,16,'#718b94');rect(c,x+2,108,2,4,'#dbbd89');}
@@ -310,11 +310,21 @@ export function drawFarewell(c:CanvasRenderingContext2D,id:Identity,time:number,
   const memories=journey?.memories??[];
   travelCase(c,memories,248,139,id,selected,recalledKeepsake(memories,departure));
   if(journey?.resolution==='carry'){rect(c,250,127,16,12,'#927c68');drawKeepsake(c,5,258,130,1,keepsakeTopic(id,5).text);}
+  if(journey?.farewellNote){
+    const seal=ease((departure-.08)/.24),x=191+63*seal,y=132-26*Math.sin(seal*Math.PI)+8*seal;
+    rect(c,x,y,14,10,'#eee1c5');rect(c,x+1,y+1,12,2,'#bd9e80');
+    rect(c,x+5,y+4,4,3,seal>.65?'#bd8580':'#8b9a96');
+  }
   if(departure>.2&&departure<.76){for(let i=1;i<=3;i++)rect(c,ghostX-i*7,ghostY-12+(i%2)*5,2,2,i%2?colors.gold:colors.mint);}
-  rect(c,277,85,2,34,'#bf9d7a');rect(c,272,114,12,4,'#f2d59a');rect(c,275,118,6,3,'#ffeac0');
-  c.save();c.globalAlpha=.07+Math.sin(time*1.8)*.01;c.fillStyle=colors.gold;c.beginPath();c.moveTo(273,120);c.lineTo(242,165);c.lineTo(314,165);c.lineTo(281,120);c.fill();c.restore();
+  const lamplight=1-ease((departure-.12)/.32);
+  rect(c,277,85,2,34,'#bf9d7a');rect(c,272,114,12,4,lamplight>.3?'#f2d59a':'#716b69');rect(c,275,118,6,3,lamplight>.3?'#ffeac0':'#857565');
+  c.save();c.globalAlpha=(.07+Math.sin(time*1.8)*.01)*lamplight;c.fillStyle=colors.gold;c.beginPath();c.moveTo(273,120);c.lineTo(242,165);c.lineTo(314,165);c.lineTo(281,120);c.fill();c.restore();
+  if(intent==='pause'&&departure>.4){
+    // A window stays warm for a possible return; no return date is imposed.
+    c.save();c.globalAlpha=ease((departure-.4)/.25);rect(c,85,98,10,16,'#e7bc79');rect(c,98,98,10,16,'#e7bc79');rect(c,96,97,1,19,'#596273');c.restore();
+  }
   const fade=ease((dark-.88)/.12);if(fade){c.fillStyle=`rgba(12,16,31,${fade*.84})`;c.fillRect(0,0,WIDTH,HEIGHT);}
-  const celebration=settled||cinematic?0:ease((departure-.62)/.38);
+  const celebration=settled||cinematic||intent!=='completed'?0:ease((departure-.62)/.38);
   if(celebration){
     const palette=[colors.gold,colors.mint,colors.cream,colors.rose];
     for(let burst=0;burst<4;burst++){
@@ -325,8 +335,23 @@ export function drawFarewell(c:CanvasRenderingContext2D,id:Identity,time:number,
     for(let i=0;i<28;i++){const fall=(time*23+i*17)%112,x=(i*73+384+Math.sin(time+i)*13)%384;rect(c,x,fall,2,i%3===0?4:2,palette[i%palette.length]);}
   }
   c.restore();
-  if(cinematic&&film>.55)drawFireworks(c,time,ease((film-.55)/.22));
-  if(settled&&id.destination)drawFireworks(c,2.6,.75);
+  const sky=settled?1:cinematic?ease((film-.55)/.22):0;
+  if(sky){
+    if(intent==='completed')drawFireworks(c,settled?2.6:time,sky*.85);
+    else if(intent==='handover'){
+      // Passing the light echoes handing the project to its next keeper.
+      for(let i=0;i<7;i++){const lit=settled?1:ease((film-.55-i*.035)/.12);c.save();c.globalAlpha=lit*.85;const x=36+i*48,y=46-Math.sin(i/6*Math.PI)*22;rect(c,x,y,5,7,colors.gold);rect(c,x+1,y+2,3,3,colors.cream);rect(c,x+2,y+7,1,4,'#b08773');c.restore();}
+    }else{
+      c.save();c.globalAlpha=sky*.7;
+      for(let i=0;i<12;i++)star(c,24+i*30,16+(i*17)%40,intent==='pause'?colors.gold:colors.mint,settled?.4:.35+Math.sin(time*.7+i)*.1);
+      c.restore();
+    }
+    if(journey?.citySecret){
+      c.save();c.globalAlpha=sky*.7;
+      for(let i=0;i<6;i++){const x=207+i*28,y=162-i*4;rect(c,x,y,2,2,colors.mint);rect(c,x-2,y+2,6,1,'#4f807b');}
+      c.restore();
+    }
+  }
   for(const ripple of ripples){
     const age=rippleTime-ripple.at;if(age<0||age>.95)continue;
     c.save();

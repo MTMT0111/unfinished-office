@@ -3,7 +3,7 @@ import { choiceOf, corneredBoxes, directions, goals, levels, move, newBoard, new
 import { CELL, HEIGHT, OX, OY, WIDTH, drawScene, drawOpening, drawFarewell, drawRecollection, drawKeepsake, ease, type Motion, type Pulse, type StationRipple } from './scene.ts';
 import { renderDossier } from './dossier.ts';
 import { commitEvidence } from './journal.ts';
-import { chapterCargo, keepsakeStory, keepsakeTopic, memoryStory, parcelContents, validateNextStep, keepsakes, resolutionText, rememberedPage, farewellLines } from './memory.ts';
+import { chapterCargo, keepsakeStory, keepsakeTopic, memoryStory, parcelContents, validateNextStep, validateFarewellNote, keepsakes, resolutionText, rememberedPage, farewellLines } from './memory.ts';
 import { createMemorial, createMemoryBook, localDate } from './export.ts';
 import { Sound } from './sound.ts';
 import { setupImport } from './import-ui.ts';
@@ -145,6 +145,7 @@ function setState(next:State){
   el('confirm-panel').hidden=next!=='confirm';el('result-panel').hidden=next!=='done';
   el('opening-panel').hidden=next!=='opening';
   el('memory-panel').hidden=next!=='memory';
+  el('ceremony-controls').hidden=next!=='fading';
   el('departure-panel').hidden=leaving||!['waiting','fading','done'].includes(next);
   el('journey-bag').hidden=leaving||!['playing','cleared','waiting','done'].includes(next);
   el('show-controls').hidden=leaving||!['playing','cleared','memory','paused','waiting'].includes(next);
@@ -193,6 +194,7 @@ function setState(next:State){
   el('station-intent-panel').hidden=next!=='waiting';
   el<HTMLSelectElement>('station-intent').value=identity.farewellIntent??'undecided';
   el('station-intent-note').textContent=farewell.description;
+  if(next==='waiting')el<HTMLButtonElement>('use-project-note').disabled=!identity.regret||Boolean(el<HTMLTextAreaElement>('farewell-note').value.trim());
   el('lamp').textContent=farewell.action;
   el('lamp-hotspot').setAttribute('aria-label',farewell.action);
   if(next==='done'){el('result-title').textContent=farewell.label;el('result-intent').textContent=farewell.finale;}
@@ -391,9 +393,11 @@ function start(){
   el<HTMLDetailsElement>('city-workbench').open=false;
   el('city-status').textContent=destinationCaption(identity.destination)+' · 场景天气由你选择。';
   pulses=[];selectedParcel=undefined;stationRipples=[];cancelAnimationFrame(stationRaf);stationRaf=0;
+  const farewellNote=state==='done'?journey.farewellNote:undefined;
   const notes=state==='done'?journey.notes:{},bookmark=state==='done'?journey.bookmark:undefined;pickupAt=undefined;stationStoryIndex=undefined;el('station-story').hidden=true;
   playMode=document.querySelector<HTMLInputElement>('input[name="play-mode"]:checked')?.value==='together'?'together':'solo';
-  stopClock();sound.stop();releasePreview();elapsed=0;dark=0;leaving=false;journey={...newJourney(),notes,bookmark};levelIndex=0;board=newBoard(levels[0]);history=[];future=[];motion=undefined;entered=0;queued=[];hintPoint=undefined;
+  stopClock();sound.stop();releasePreview();elapsed=0;dark=0;leaving=false;journey={...newJourney(),notes,bookmark,farewellNote};
+  el<HTMLTextAreaElement>('farewell-note').value=farewellNote??'';el('farewell-note-error').textContent='';el('farewell-note-status').textContent=`${count(farewellNote??'')} / 120 字 · 可留白`;levelIndex=0;board=newBoard(levels[0]);history=[];future=[];motion=undefined;entered=0;queued=[];hintPoint=undefined;
   el('export-error').textContent='';el('export-status').textContent='';el('book-status').textContent='';el('sound-note').textContent='';
   el('app').dataset.reduced=String(reduced.checked);
   if(reduced.checked){enterPlaying();void enableSound();lastStamp=performance.now();raf=requestAnimationFrame(tick);}
@@ -614,19 +618,32 @@ async function generatePreview(){
     openImage.href=previewUrl;openImage.hidden=false;download.disabled=false;el('export-status').textContent='';
   }catch(e){if(sequence===exportSequence&&state==='done'){error('export-error',e);el('export-status').textContent='';el('retry-export').hidden=false;}}
 }
-function finish(){showResultPage('ticket');renderProjectMedia(el('result-media'),identity);stopClock();dark=1;sound.stop();setState('done');draw();renderDossier(el('result-keywords'),identity);renderAlbum();el('result-name').textContent=identity.facts.name.value;el('journey-stats').textContent=`${journey.visited.length} / ${levels.length} 站 · ${journey.memories.length} 件旅途物件${journey.skipped?' · 提前到站':''}`;el('ending-choice').hidden=!journey.resolution;el('ending-choice').textContent=journey.resolution?resolutionText[journey.resolution]:'';void generatePreview();el('result-panel').scrollIntoView({block:'start',behavior:'instant'});el('replay').focus({preventScroll:true});}
+function finish(){el('result-letter').hidden=!journey.farewellNote;el('result-letter-text').textContent=journey.farewellNote??'';showResultPage('ticket');renderProjectMedia(el('result-media'),identity);stopClock();dark=1;sound.stop();setState('done');draw();renderDossier(el('result-keywords'),identity);renderAlbum();el('result-name').textContent=identity.facts.name.value;el('journey-stats').textContent=`${journey.visited.length} / ${levels.length} 站 · ${journey.memories.length} 件旅途物件${journey.skipped?' · 提前到站':''}`;el('ending-choice').hidden=!journey.resolution;el('ending-choice').textContent=journey.resolution?resolutionText[journey.resolution]:'';void generatePreview();el('result-panel').scrollIntoView({block:'start',behavior:'instant'});el('replay').focus({preventScroll:true});}
+function saveFarewellNote(){
+  try{const note=validateFarewellNote(el<HTMLTextAreaElement>('farewell-note').value);journey.farewellNote=note;el('farewell-note-error').textContent='';el('farewell-note-status').textContent=`${count(note)} / 120 字 · ${note?'已放进这次旅程，纪念票和回忆册会一起收好':'可留白'}`;el<HTMLButtonElement>('use-project-note').disabled=!identity.regret||Boolean(note);return true;}
+  catch(e){error('farewell-note-error',e);return false;}
+}
+el('farewell-note').addEventListener('input',saveFarewellNote);
+el('use-project-note').addEventListener('click',()=>{if(state!=='waiting'||!identity.regret||el<HTMLTextAreaElement>('farewell-note').value.trim())return;el<HTMLTextAreaElement>('farewell-note').value=identity.regret;saveFarewellNote();});
 function lightsOut(){
-  if(state!=='waiting')return;
+  if(!['waiting','done'].includes(state))return;
+  if(state==='waiting'&&!saveFarewellNote()){el('farewell-note').closest('details')!.open=true;el('farewell-note').focus();return;}
+  dark=0;stationRipples=[];el('station-story').hidden=true;el<HTMLProgressElement>('ceremony-progress').value=0;el('ceremony-chapter').textContent='01 / 收好这一程';
   stopClock();setState('fading');sound.stop();sound.lamp();const began=performance.now(),words=farewellLines(identity,journey);
   if(reduced.checked){finish();return;}
+  el('stage-frame').scrollIntoView({block:'start',behavior:'instant'});el('skip-ceremony').focus({preventScroll:true});
   function fade(now:number){
     if(state!=='fading')return;dark=Math.min(1,(now-began)/9000);
+    el<HTMLProgressElement>('ceremony-progress').value=dark;
+    const chapter=dark<.22?'01 / 收好这一程':dark<.55?'02 / 把心意留下':'03 / 让这一程慢慢远去';if(el('ceremony-chapter').textContent!==chapter)el('ceremony-chapter').textContent=chapter;
     const line=dark<.18&&rememberedPage(identity,journey)?'这一页，交给你。':dark<.40?words.luggage:dark<.62?words.signal:dark<.82?'谢谢你陪我走到这里。':words.closing;
     if(el('departure-voice').textContent!==line)el('departure-voice').textContent=line;
     draw();if(dark>=1)finish();else raf=requestAnimationFrame(fade);
   }
   raf=requestAnimationFrame(fade);
 }
+el('replay-ceremony').addEventListener('click',()=>{if(state==='done')lightsOut();});
+el('skip-ceremony').addEventListener('click',()=>{if(state==='fading')finish();});
 el('lamp').addEventListener('click',lightsOut);el('lamp-hotspot').addEventListener('click',lightsOut);
 el('replay').addEventListener('click',()=>{if(state==='done')start();});
 el('new-project').addEventListener('click',returnToInput);
@@ -655,7 +672,7 @@ el('open-settings').addEventListener('click',()=>{
 });
 settings.addEventListener('close',()=>{if(resumeAfterSettings&&!document.hidden)resume();if(state==='waiting')animateWaiting();else if(state==='done')animateStationRipples();else if(state==='opening'&&!document.hidden){if(reduced.checked)completeOpening();else{lastStamp=performance.now();raf=requestAnimationFrame(tick);}}else if(['input','reading'].includes(state))animateCover();resumeAfterSettings=false;});
 settingsSound.addEventListener('change',()=>{sound.setMuted(!settingsSound.checked);syncMute();if(!sound.muted)void enableSound();});
-function syncReduced(){settingsReduced.checked=reduced.checked;el('app').dataset.reduced=String(reduced.checked);motion=undefined;queued=[];pickupAt=undefined;pulses=[];if(['input','reading'].includes(state))animateCover();else if(state==='waiting')animateWaiting();draw();}
+function syncReduced(){if(reduced.checked&&state==='fading'){finish();}settingsReduced.checked=reduced.checked;el('app').dataset.reduced=String(reduced.checked);motion=undefined;queued=[];pickupAt=undefined;pulses=[];if(['input','reading'].includes(state))animateCover();else if(state==='waiting')animateWaiting();draw();}
 settingsReduced.addEventListener('change',()=>{reduced.checked=settingsReduced.checked;syncReduced();});
 reduced.addEventListener('change',syncReduced);guides.addEventListener('change',draw);
 document.addEventListener('visibilitychange',()=>{

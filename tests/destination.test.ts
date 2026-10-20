@@ -2,8 +2,19 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {destination,destinationCaption} from '../src/destination.ts';
 import {confirmIdentity,example,fields,type Field} from '../src/input.ts';
-import {memoryBookHtml} from '../src/memory.ts';
+import {memoryBookHtml,validateFarewellNote,farewellLines} from '../src/memory.ts';
 import {newJourney} from '../src/game.ts';
+
+test('告别短信允许留白、按 Unicode 限长；提前到站也保存原文且转义 HTML',()=>{
+  assert.equal(validateFarewellNote('  \n '),'');assert.equal(validateFarewellNote(' 💛 '),'💛');
+  assert.equal(Array.from(validateFarewellNote('💛'.repeat(120))).length,120);
+  assert.throws(()=>validateFarewellNote('字'.repeat(121)),/120/);
+  const id=example('weather'),record={...newJourney(),skipped:true,farewellNote:'谢谢这十年\n<script>不是未完成，就没有意义</script>'};
+  assert(farewellLines(id,record).signal.includes(record.farewellNote));
+  const html=memoryBookHtml(id,record,'data:image/png;base64,AAAA');
+  assert(html.includes('你留给项目的短信'));assert(html.includes('谢谢这十年\n&lt;script&gt;'));assert(!html.includes('<script>'));
+  assert.deepEqual(record.visited,[]);assert.deepEqual(record.memories,[]);
+});
 
 test('城市别名匹配固定风格，未知城市诚实降级，空名称和未知季节拒绝',()=>{
   for(const name of ['北京','北京市','Beijing',' Peking '])assert.equal(destination(name,'snow').kind,'beijing');
