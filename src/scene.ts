@@ -2,6 +2,7 @@ import { gateOpen, levels, positions, same, tile, type Board, type Point, type J
 import type { GitMilestone, Identity } from './input.ts';
 import { keepsakeTopic } from './memory.ts';
 import { drawCity, drawFireworks } from './destination.ts';
+import { relicRows } from './relics.ts';
 
 export const WIDTH=384,HEIGHT=240,CELL=24,OX=84,OY=35;
 export const ease=(v:number)=>{const t=Math.max(0,Math.min(1,v));return t*t*(3-2*t);};
@@ -309,6 +310,14 @@ export function drawFarewell(c:CanvasRenderingContext2D,id:Identity,time:number,
   }
   const memories=journey?.memories??[];
   travelCase(c,memories,248,139,id,selected,recalledKeepsake(memories,departure));
+  if(journey){
+    const relics=relicRows(id,journey);
+    if(relics.some(item=>item.place==='rest')){rect(c,82,148,48,3,'#9b746e');rect(c,85,151,3,15,'#68545f');rect(c,123,151,3,15,'#68545f');}
+    for(const [i,item] of relics.entries()){
+      const x=item.place==='keep'?251+i*6:item.place==='pass'?324+trainLeave+i*5:86+i*7,y=item.place==='keep'?142:item.place==='pass'?142:139;
+      rect(c,x,y,7,9,item.place==='keep'?colors.gold:item.place==='pass'?colors.mint:'#9fb0c4');rect(c,x+2,y+2,3,1,'#46576a');rect(c,x+2,y+5,2,1,'#46576a');
+    }
+  }
   if(journey?.resolution==='carry'){rect(c,250,127,16,12,'#927c68');drawKeepsake(c,5,258,130,1,keepsakeTopic(id,5).text);}
   if(journey?.farewellNote){
     const seal=ease((departure-.08)/.24),x=191+63*seal,y=132-26*Math.sin(seal*Math.PI)+8*seal;

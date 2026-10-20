@@ -169,9 +169,15 @@ export async function searchRepositories(query:string,signal:AbortSignal):Promis
   const data=await github('/search/repositories?per_page=6&q='+encodeURIComponent(query.trim()),signal);
   return (data.items||[]).filter((item:any)=>typeof item.full_name==='string'&&repoName(item.full_name)).slice(0,6).map((item:any)=>({name:item.full_name,description:take(String(item.description||'暂无介绍'),160)}));
 }
-export async function readCommitHistory(name:string,signal:AbortSignal):Promise<GitMilestone[]>{
+export function historyUntil(before=''):string {
+  if(!before)return '';
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(before)||before<'1970-01-01'||before>'2099-12-31'||!Number.isFinite(Date.parse(before))||new Date(before).toISOString().slice(0,10)!==before)throw new Error('请选择 1970–2099 年之间有效的日期。');
+  return before+'T23:59:59Z';
+}
+export async function readCommitHistory(name:string,signal:AbortSignal,before=''):Promise<GitMilestone[]>{
   const valid=repoName(name);if(!valid)throw new Error('仓库名称格式无效。');
-  const data=await github('/repos/'+valid.split('/').map(encodeURIComponent).join('/')+'/commits?per_page=40',signal);
+  const until=historyUntil(before);
+  const data=await github('/repos/'+valid.split('/').map(encodeURIComponent).join('/')+'/commits?per_page=40'+(until?'&until='+encodeURIComponent(until):''),signal);
   return normalizeMilestones(data,valid);
 }
 export async function readCommit(name:string,sha:string,signal:AbortSignal):Promise<GitMilestone>{

@@ -5,7 +5,7 @@ import {execFile, spawn} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {promisify} from 'node:util';
 import {analysisPrompt, ANALYSIS_TIMEOUTS, DEFAULT_BASE, DEFAULT_MODEL, parseAnalysis, validateProject} from './src/analysis.ts';
-import {githubProject, normalizeMilestones, repoName} from './src/project.ts';
+import {githubProject, normalizeMilestones, repoName, historyUntil} from './src/project.ts';
 import {readCompletion} from './src/stream.ts';
 
 const root=path.dirname(fileURLToPath(import.meta.url));
@@ -86,7 +86,8 @@ export function createApp({fetchImpl=fetch,ghRun=runGitHub,analysisTimeouts=ANAL
         if(!name)return json(400,{error:'仓库名称格式无效。'});
         const route='repos/'+name.split('/').map(encodeURIComponent).join('/');
         if(url.pathname==='/api/github/commits'){
-          const commits=commandJson(await ghRun(['api','-X','GET',route+'/commits','-f','per_page=40'],{signal:controller.signal}));
+          let until;try{until=historyUntil(url.searchParams.get('before')||'');}catch(error){return json(400,{error:error.message});}
+          const commits=commandJson(await ghRun(['api','-X','GET',route+'/commits','-f','per_page=40',...(until?['-f','until='+until]:[])],{signal:controller.signal}));
           return json(200,{commits:normalizeMilestones(commits,name)});
         }
         if(url.pathname==='/api/github/commit'){

@@ -1,4 +1,4 @@
-import { chooseDirectory, cleanText, localIdentity, readCommit, readCommitHistory, readDirectory, readFolderFiles, readRepository, repoName, searchRepositories, suggestedMilestones, supportsDirectoryPicker, type Project } from './project.ts';
+import { chooseDirectory, cleanText, historyUntil, localIdentity, readCommit, readCommitHistory, readDirectory, readFolderFiles, readRepository, repoName, searchRepositories, suggestedMilestones, supportsDirectoryPicker, type Project } from './project.ts';
 import { take, type GitMilestone, type Identity } from './input.ts';
 import { commitEvidence } from './journal.ts';
 import { ANALYSIS_TIMEOUTS } from './analysis.ts';
@@ -10,7 +10,7 @@ export function setupImport(onConfirm:(identity:Identity)=>void):()=>void{
   const key=el<HTMLInputElement>('api-key'),base=el<HTMLInputElement>('api-base'),model=el<HTMLInputElement>('api-model');
   function busy(active:boolean){
     el('materials').setAttribute('aria-busy',String(active));
-    for(const id of ['choose-folder','find-repository','github-login','analyze-project','local-review','analyze-text'])el<HTMLButtonElement>(id).disabled=active;
+    for(const id of ['choose-folder','find-repository','github-login','analyze-project','local-review','analyze-text','load-history'])el<HTMLButtonElement>(id).disabled=active;
     el('cancel-import').hidden=!active;
     for(const check of document.querySelectorAll<HTMLInputElement>('#materials input[type=checkbox]'))check.disabled=active;
   }
@@ -36,12 +36,12 @@ export function setupImport(onConfirm:(identity:Identity)=>void):()=>void{
   function previews(){
     const preview=el('milestone-preview');preview.replaceChildren(...selectedMilestones().map(commit=>commitEvidence(commit)));
   }
-  function renderMilestones(next:Project){
+  function renderMilestones(next:Project,chosen?:Set<string>){
     const details=el<HTMLDetailsElement>('milestone-details'),list=el('milestone-list');details.hidden=next.origin!=='github';list.replaceChildren();
     const commits=next.milestones||[];
-    const suggested=new Set(suggestedMilestones(commits).map(commit=>commit.sha));
+    const suggested=chosen??new Set(suggestedMilestones(commits).map(commit=>commit.sha));
     el('milestone-summary').textContent=`回忆从这里开始 · 已选 ${suggested.size} 次更新`;
-    el('milestone-note').textContent=commits.length?'从默认分支最近 40 条记录中按时间预选，未判断重要性。可改选最多 5 次；生成档案会把勾选提交、作者和下方改动片段一并发给所配置 API。日期是提交日期，不是推送时间。':'没有读到提交记录。只整理现有资料，不编造过去的事件。';
+    el('milestone-note').textContent=commits.length?'每次读取默认分支截至所选日期的最近 40 条记录；可跨年份保留已选项，最多 5 次。初次按时间预选，未判断重要性。生成档案会把勾选提交、作者和改动片段一并发给所配置 API。日期是提交日期，不是推送时间。':'没有读到提交记录。只整理现有资料，不编造过去的事件。';
     for(const [i,commit] of commits.entries()){
       const row=document.createElement('label'),check=document.createElement('input'),body=document.createElement('span'),subject=document.createElement('span'),meta=document.createElement('small');
       row.className='milestone-option';check.type='checkbox';check.id='milestone-'+i;check.checked=suggested.has(commit.sha);
@@ -115,8 +115,18 @@ export function setupImport(onConfirm:(identity:Identity)=>void):()=>void{
     }catch(error){if(signal.aborted)throw error;next.notes.push('提交记录未读取成功；项目资料仍可照常使用。');}
     next.repository=name;
     await enrich(suggestedMilestones(next.milestones??[]),name,signal);
-    signal.throwIfAborted();render(next);
+    signal.throwIfAborted();el<HTMLInputElement>('history-before').value='';el('history-status').textContent='当前查看最近的提交。';render(next);
   }
+  el('load-history').addEventListener('click',()=>void run(async signal=>{
+    if(!project?.repository)throw new Error('先选择一个 GitHub 仓库。');
+    const current=project,before=el<HTMLInputElement>('history-before').value;historyUntil(before);
+    const kept=selectedMilestones(),name=current.repository!;
+    const commits=location.protocol==='file:'?await readCommitHistory(name,signal,before):(await githubRequest('/api/github/commits?name='+encodeURIComponent(name)+'&before='+encodeURIComponent(before),signal)).commits as GitMilestone[];
+    signal.throwIfAborted();if(current!==project)return;
+    if(!commits.length){el('history-status').textContent='这段时间没有读到提交，原来的记录和选择已保留。';return;}
+    const seen=new Set(kept.map(commit=>commit.sha));current.milestones=[...kept,...commits.filter(commit=>!seen.has(commit.sha))];
+    renderMilestones(current,seen);el('history-status').textContent=`已读取${before?'截至 '+before+'（UTC）':'最近'}的 ${commits.length} 条记录；保留原来选中的 ${kept.length} 条。`;
+  }));
   el('github-source').addEventListener('submit',event=>{
     event.preventDefault();void run(async signal=>{
       const value=el<HTMLInputElement>('github-query').value.trim().replace(/^github\.com\//i,'https://github.com/'),name=repoName(value);

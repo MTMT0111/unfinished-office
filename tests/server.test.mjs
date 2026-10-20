@@ -10,6 +10,15 @@ async function serve(t,fetchImpl=fetch,config={base:'https://api.deepseek.com',m
 }
 const options=data=>({method:'POST',headers:{'Content-Type':'application/json','X-Project-Review':'1'},body:JSON.stringify({project,...data})});
 
+test('历史提交查询传递明确的 UTC 截止日，非法日期不发出 GitHub 请求',async t=>{
+  const calls=[],url=await serve(t,fetch,undefined,async args=>{calls.push(args);return args[0]==='auth'?'logged in':'[]';}),headers={'X-Project-Review':'1'};
+  assert.equal((await fetch(url+'/api/github/commits?name=owner/project&before=2016-02-29',{headers})).status,200);
+  assert(calls.some(args=>args.includes('until=2016-02-29T23:59:59Z')));
+  const before=calls.filter(args=>args[0]==='api').length;
+  assert.equal((await fetch(url+'/api/github/commits?name=owner/project&before=2017-02-29',{headers})).status,400);
+  assert.equal(calls.filter(args=>args[0]==='api').length,before);
+});
+
 test('GitHub 单次提交只接受完整 SHA，返回有作者的有界差异并隐藏敏感文件',async t=>{
   const sha='a'.repeat(40),calls=[];
   const raw={sha,commit:{message:'城市输入检查',author:{name:'Wen',email:'private@example.com'},committer:{date:'2026-02-03T08:00:00Z'}},files:[{filename:'src/city.ts',status:'modified',patch:'+if (!city) return;'}, {filename:'.env',patch:'secret'}]};

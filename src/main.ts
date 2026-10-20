@@ -10,6 +10,7 @@ import { setupImport } from './import-ui.ts';
 import { cleanText } from './project.ts';
 import { destination, destinationCaption, drawCity } from './destination.ts';
 import { readProjectPhoto, renderProjectMedia } from './project-media.ts';
+import { handoverMarkdown, relicFiles, relicRows, renderRelicDesk } from './relics.ts';
 
 type State = 'input'|'reading'|'confirm'|'opening'|'playing'|'cleared'|'memory'|'paused'|'waiting'|'fading'|'done';
 const el = <T extends HTMLElement=HTMLElement>(id:string) => document.getElementById(id) as T;
@@ -25,6 +26,7 @@ let state:State='input',identity=example('weather'),draft:Identity=identity;
 let journey=newJourney(),levelIndex=0,board=newBoard(levels[0]),history:Board[]=[],future:Board[]=[],motion:Motion|undefined,playMode:'solo'|'together'='solo';
 let legalSteps:Point[]=[],resumeAfterSettings=false;
 let preflightPage='project',companionLight=false;
+let memoryMode:'story'|'relic'='story';
 let pulses:Pulse[]=[],selectedParcel:number|undefined,stationRipples:StationRipple[]=[],stationRaf=0;
 let entered=0,queued:{actor:Actor;action:Direction|'switch'}[]=[],hintPoint:{x:number;y:number}|undefined;
 let raf=0,coverRaf=0,elapsed=0,lastStamp=0,dark=0,readSequence=0,exportSequence=0;
@@ -393,10 +395,10 @@ function start(){
   el<HTMLDetailsElement>('city-workbench').open=false;
   el('city-status').textContent=destinationCaption(identity.destination)+' · 场景天气由你选择。';
   pulses=[];selectedParcel=undefined;stationRipples=[];cancelAnimationFrame(stationRaf);stationRaf=0;
-  const farewellNote=state==='done'?journey.farewellNote:undefined;
+  const farewellNote=state==='done'?journey.farewellNote:undefined,relics=state==='done'?journey.relics:undefined;
   const notes=state==='done'?journey.notes:{},bookmark=state==='done'?journey.bookmark:undefined;pickupAt=undefined;stationStoryIndex=undefined;el('station-story').hidden=true;
   playMode=document.querySelector<HTMLInputElement>('input[name="play-mode"]:checked')?.value==='together'?'together':'solo';
-  stopClock();sound.stop();releasePreview();elapsed=0;dark=0;leaving=false;journey={...newJourney(),notes,bookmark,farewellNote};
+  stopClock();sound.stop();releasePreview();elapsed=0;dark=0;leaving=false;journey={...newJourney(),notes,bookmark,farewellNote,relics};
   el<HTMLTextAreaElement>('farewell-note').value=farewellNote??'';el('farewell-note-error').textContent='';el('farewell-note-status').textContent=`${count(farewellNote??'')} / 120 字 · 可留白`;levelIndex=0;board=newBoard(levels[0]);history=[];future=[];motion=undefined;entered=0;queued=[];hintPoint=undefined;
   el('export-error').textContent='';el('export-status').textContent='';el('book-status').textContent='';el('sound-note').textContent='';
   el('app').dataset.reduced=String(reduced.checked);
@@ -422,12 +424,21 @@ el('skip').addEventListener('click',()=>{if(['playing','cleared','paused'].inclu
 el('next-level').addEventListener('click',()=>{
   if(state!=='cleared')return;recordLevel();openMemory(levelIndex,null);
 });
+function showMemoryMode(mode:'story'|'relic'){
+  const available=relicFiles(identity,memoryIndex).length>0&&journey.visited.includes(memoryIndex);
+  memoryMode=available?mode:'story';el('memory-pages').hidden=!available;
+  el('story-card').hidden=memoryMode!=='story';el('relic-desk').hidden=memoryMode!=='relic';
+  for(const button of document.querySelectorAll<HTMLButtonElement>('[data-memory-mode]')){if(button.dataset.memoryMode===memoryMode)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');}
+}
+for(const button of document.querySelectorAll<HTMLButtonElement>('[data-memory-mode]'))button.addEventListener('click',()=>showMemoryMode(button.dataset.memoryMode as 'story'|'relic'));
 function memoryText(){
   const story=memoryStory(identity,memoryIndex,journey),lines=el('memory-text');
   el('memory-title').textContent=story.title;el('story-scene').textContent=story.scene;el('story-card').dataset.milestone=String(story.milestone);el('memory-source').textContent=story.source;
   lines.replaceChildren(...story.lines.map(line=>{const p=document.createElement('p');p.textContent=line;return p;}));
   const commit=story.milestone?identity.milestones?.[memoryIndex]:undefined;
   el('memory-evidence').replaceChildren(...(commit?[commitEvidence(commit)]:[]));
+  renderRelicDesk(el('relic-desk'),identity,journey,memoryIndex,()=>{releasePreview();draw();sound.found();},()=>reduced.checked);
+  showMemoryMode(memoryMode);
   const canKeep=rememberedPage(identity,journey,memoryIndex),marked=canKeep&&journey.bookmark===memoryIndex;
   el('bookmark-memory').hidden=!canKeep;el('bookmark-memory').setAttribute('aria-pressed',String(Boolean(marked)));
   el('bookmark-memory').textContent=marked?'书签已夹好 · 这一页留给我':'夹上书签，留下这一页';
@@ -440,6 +451,7 @@ function memoryText(){
   stage.setAttribute('aria-label',memoryIndex===6?`最后一站：你和「${identity.facts.name.value}」的项目幽灵在站台好好告别。`:`${story.title}。夜间事务所里，你和项目幽灵一起看着它的随身物件。`);
 }
 function openMemory(index:number,returnTo:typeof memoryReturn){
+  memoryMode='story';
   stopClock();queued=[];memoryIndex=index;memoryAt=elapsed;memoryReturn=returnTo;
   el<HTMLTextAreaElement>('memory-note').value=journey.notes[index]??'';
   el<HTMLInputElement>('next-step').value=journey.nextStep;el('next-step').removeAttribute('aria-invalid');el<HTMLDetailsElement>('future-note').open=false;el('next-step-error').textContent='';
@@ -485,6 +497,8 @@ function saveMemoryNote(){
 el('save-memory').addEventListener('click',saveMemoryNote);
 el<HTMLInputElement>('next-step').addEventListener('input',()=>{if(count(el<HTMLInputElement>('next-step').value.trim())<=60){el('next-step-error').textContent='';el('next-step').removeAttribute('aria-invalid');}});
 function renderAlbum(){
+  const relics=relicRows(identity,journey),shelf=el('relic-collection');shelf.replaceChildren();shelf.hidden=!relics.length;el('save-handover').hidden=!relics.length;
+  if(relics.length){const heading=document.createElement('h3');heading.textContent='你亲手收好的项目遗物';shelf.append(heading);for(const row of relics){const button=document.createElement('button');button.type='button';button.textContent=`${row.label} · ${row.path}`;button.addEventListener('click',()=>openMemory(row.index,'done'));shelf.append(button);}}
   el('album-empty').hidden=journey.visited.length>0;
   const page=rememberedPage(identity,journey);el('remembered-page').hidden=!page;
   el('remembered-title').textContent=page?.title??'';el('remembered-source').textContent=page?`${page.date?page.date+' · ':''}${page.source}`:'';
@@ -662,6 +676,12 @@ el('save-book').addEventListener('click',()=>{
     link.href=url;link.download=result.filename;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
     el('book-status').textContent='已发起下载 · 双击回忆册文件，离线也能翻阅。';
   }catch(e){error('book-status',e);}
+});
+el('save-handover').addEventListener('click',()=>{
+  if(state!=='done')return;
+  const blob=new Blob([handoverMarkdown(identity,journey)],{type:'text/markdown;charset=utf-8'}),url=URL.createObjectURL(blob),link=document.createElement('a');
+  link.href=url;link.download='项目行李与交接.md';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+  el('book-status').textContent='已下载交接单，包含你的去向选择、个人补记和原始提交链接。可核对后自行放回项目仓库。';
 });
 function syncMute(){el('mute').textContent=sound.muted?'声音：关':'声音：开';el('mute').setAttribute('aria-pressed',String(sound.muted));settingsSound.checked=!sound.muted;}
 el('mute').addEventListener('click',()=>{sound.setMuted(!sound.muted);syncMute();if(!sound.muted)void enableSound();});
