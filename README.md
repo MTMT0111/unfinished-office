@@ -10,6 +10,10 @@
 
 ## 先试玩
 
+需要较短的完整体验时，选择样例后，在“今天，陪它走多远？”选 **一站同行**：实际走完第一关 → 翻看回忆、整理一件原件 → 到站 → 亲手完成正式告别 → 保存纪念。结果会如实显示 `1 / 7 站 · 一站同行`。默认仍是七站旅程；途中临时退出会另标提前到站。
+
+现场接手请看 [协作者交接](COLLABORATOR-HANDOFF.md)，包含启动步骤、演示路径与留给 Kiro 的具体增量任务。需求和设计位于 [.kiro/specs/one-stop-farewell](.kiro/specs/one-stop-farewell/requirements.md)，实际工具使用记录见 [KIRO-LOG.md](KIRO-LOG.md)。
+
 [打开公网试玩版](https://mtmt0111.github.io/unfinished-office-play/)。这是面向玩家的静态版本，包含样例、浏览器支持的本地材料选择、手动整理和完整游戏。要用本机 GitHub 登录态读取仓库或调用 API，请运行下面的完整版本。
 
 ## 游戏画面
@@ -83,7 +87,7 @@ npm run build
 
 `npm run build` 生成 `dist/` 和可离线双击的 `打开试玩.html`。主要代码位于 `src/`，本地 GitHub/API 服务在 `server.mjs`，关卡与故事设计见 [DESIGN-JOURNEY.md](DESIGN-JOURNEY.md)，原创素材说明见 [ASSETS.md](ASSETS.md)。运行环境或端口可通过 `UNFINISHED_OFFICE_PORT` 调整。
 
-**比赛与署名：**当前版本是由 Codex 按主创要求协助实现的原型，不是 Kiro 现场开发成果。若用于 Kiro 比赛，请按[官方活动规则](https://builderx.csdn.net/activity-site/kiro/index)完成并记录符合要求的 Kiro 创作，不要把当前版本描述为 Kiro 开发。代码提交应保留实际作者与共同作者信息；无需在项目中保存邮箱等个人信息。
+**比赛与署名：**2026-10-21 用户确认沿用现有项目，先完成部分功能，现场由协作者继续完善。本轮基础实现与交接材料由 Codex 完成；实际 Kiro 调用尚未成功，不能计作 Kiro 开发成果。后续按现场要求记录 Kiro 的具体任务、人工判断和真实提交。代码提交保留实际作者与共同作者信息；无需在项目中保存账户邮箱等个人信息。
 
 ## 亲手完成正式告别
 

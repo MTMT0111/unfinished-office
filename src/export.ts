@@ -1,6 +1,6 @@
 import { farewells, memorialDetail, safeFilename, type Identity } from './input.ts';
 import { drawFarewell, drawKeepsake } from './scene.ts';
-import { levels, type Journey } from './game.ts';
+import { levels, journeyStats, type Journey } from './game.ts';
 import { memoryBookHtml, rememberedPage, validateFarewellNote } from './memory.ts';
 import { destinationCaption } from './destination.ts';
 import {ritualLines} from './ritual.ts';
@@ -51,7 +51,7 @@ export async function createMemorial(identity:Identity,date:string|null,journey:
     c.font=font(13);c.fillText('想留下的这一页',1104,y-26);
     c.font=font(20);const lines=wrap(c,page.title,590);c.fillText(lines[0]+(lines.length>1?'…':''),1104,y-5);
   }else{c.font=font(20);c.fillText(frozen.farewellIntent&&frozen.farewellIntent!=='undecided'?farewells[frozen.farewellIntent].finale:record.skipped?'今天先到这里。谢谢你来过。':'谢谢你，陪它走完这一程。',1104,y-10);}
-  c.textAlign='left';c.font=font(13);c.fillStyle='#8a7965';c.fillText(`${record.visited.length} / 7 站 · ${record.memories.length} 件回忆${record.citySecret?' · 城市灯语已点亮':''}`,48,y+45);c.textAlign='right';c.fillText('ONE MORE LITTLE JOURNEY',1104,y+45);
+  c.textAlign='left';c.font=font(13);c.fillStyle='#8a7965';c.fillText(journeyStats(record)+(record.citySecret?' · 城市灯语已点亮':''),48,y+45);c.textAlign='right';c.fillText('ONE MORE LITTLE JOURNEY',1104,y+45);
   if(letter){c.textAlign='left';c.font=font(14);c.fillText('你留给项目的短信',48,y+90);c.fillStyle='#51483f';c.font=font(22);letterLines.forEach((line,i)=>c.fillText(line,48,y+120+i*32));}
   if(receipt.length){c.textAlign='left';c.fillStyle='#8a7965';c.font=font(14);c.fillText('告别记 / 亲手封存 · 不代表项目完工',48,receiptY+4);c.fillStyle='#51483f';c.font=font(20);receipt.forEach((line,i)=>c.fillText(line,48,receiptY+38+i*28));}
   const blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error('图片暂时没有生成，请重试。')),'image/png'));

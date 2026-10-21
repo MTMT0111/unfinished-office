@@ -12,6 +12,7 @@ import { destination, destinationCaption, drawCity } from './destination.ts';
 import { readProjectPhoto, renderProjectMedia } from './project-media.ts';
 import { handoverMarkdown, relicFiles, relicRows, renderRelicDesk } from './relics.ts';
 import {drawRitual,ritualLights,ritualLines,sealRitual,unfinishedPage} from './ritual.ts';
+import {reachedJourneyEnd,journeyStats} from './game.ts';
 
 type State = 'input'|'reading'|'confirm'|'opening'|'playing'|'cleared'|'memory'|'paused'|'waiting'|'fading'|'done';
 const el = <T extends HTMLElement=HTMLElement>(id:string) => document.getElementById(id) as T;
@@ -81,7 +82,7 @@ function addStationRipple(x:number,y:number,kind:StationRipple['kind']='water'){
   draw();animateStationRipples();
 }
 function refreshGame(){
-  const waitingAtStation=journey.skipped&&['waiting','fading','done'].includes(state);
+  const waitingAtStation=['waiting','fading','done'].includes(state);
   routeStops.forEach((stop,index)=>{
     const complete=journey.visited.includes(index),current=!complete&&(waitingAtStation?index===levels.length-1:index===levelIndex||index===0&&['input','reading','confirm'].includes(state));
     stop.dataset.progress=complete?'complete':current?'current':'upcoming';
@@ -122,6 +123,7 @@ function refreshGame(){
   el('clear-memory').textContent=board.found?`伙伴：我会记得「${keepsakeTopic(identity,levelIndex).text}」。`:memory?`伙伴：${memory.date}，我们完成了「${memory.subject}」。`:choice==='shelf'?'伙伴：这页先留在书架。':choice==='carry'?'伙伴：这页留给下一站。':levelIndex===6?'伙伴：最后一件行李收好了。去站台吧。':'留一格空白，也可以继续走';
   el('app').dataset.level=String(levelIndex);el('app').dataset.board=JSON.stringify(board);el('app').dataset.mode=playMode;
   el('app').dataset.active=board.active;
+  el('app').dataset.itinerary=journey.itinerary??'full';
   el('app').dataset.memories=String(journey.memories.length+(board.found&&!journey.memories.includes(levelIndex)?1:0));
   for(const [i,button] of bagButtons.entries()){
     const commit=i<5?identity.milestones?.[i]:undefined,topic=keepsakeTopic(identity,i),label=button.querySelector('small')!,icon=button.querySelector('canvas')!;
@@ -269,6 +271,7 @@ function enterConfirm(next:Identity){
   cancelImport();readSequence++;
   if(!ctx){error('input-error','当前浏览器无法绘制像素舞台。请换个浏览器重试，输入仍会保留。');return;}
   draft=next;identity=structuredClone(next);
+  el<HTMLInputElement>('route-full').checked=true;
   showPreflight('project');renderProjectMedia(el('project-media'),draft);
   el('clear-photos').hidden=!draft.photos?.length;el('photo-status').textContent='最多 4 张，仅用于本次旅程；下载回忆册会一并保存。';
   el<HTMLInputElement>('departure-city').value=draft.destination?.city??'';
@@ -359,9 +362,9 @@ function tick(now:number){
     const lines=openingJourney?[
       {at:1.3,text:`夜班灯亮了。「${identity.facts.name.value||'这个项目'}」带着最近的更新，回到事务所。`},
       {at:3.2,text:count?`桌上有 ${count} 次已选中的提交；没有取到的经过，就留白。`:'这份资料没有 Git 提交记录，我们不替它补写过去。'},
-      {at:5.5,text:'前五站会翻看提交与项目线索；每一页都能打开原始依据。'},
-      {at:7.7,text:'你搬运行李，伙伴穿过水道踩住机关，再替走过的路点灯。'},
-      {at:10,text:'到书库时，亲手决定想留下的那一页放在哪里。'},
+      {at:5.5,text:journey.itinerary==='one'?'这一程只走雨后小径，翻看第一份项目线索，再去站台告别。':'前五站会翻看提交与项目线索；每一页都能打开原始依据。'},
+      {at:7.7,text:journey.itinerary==='one'?'你推好行李，再和伙伴一起走到各自的脚印。':'你搬运行李，伙伴穿过水道踩住机关，再替走过的路点灯。'},
+      {at:10,text:journey.itinerary==='one'?'到回忆桌，选一件真实文件，决定珍藏、交接还是暂存；也可以留白。':'到书库时，亲手决定想留下的那一页放在哪里。'},
       {at:11.8,text:'最后一起到站。关掉灯，让伙伴带着这段同行启程。'},
     ]:[
       {at:1.6,text:'夜雨落在事务所的窗上，桌面还亮着一盏灯。'},
@@ -402,6 +405,7 @@ function start(){
   const notes=state==='done'?journey.notes:{},bookmark=state==='done'?journey.bookmark:undefined;pickupAt=undefined;stationStoryIndex=undefined;el('station-story').hidden=true;
   playMode=document.querySelector<HTMLInputElement>('input[name="play-mode"]:checked')?.value==='together'?'together':'solo';
   stopClock();sound.stop();releasePreview();elapsed=0;dark=0;leaving=false;journey={...newJourney(),notes,bookmark,farewellNote,relics};
+  journey.itinerary=el<HTMLInputElement>('route-one').checked?'one':'full';
   el<HTMLTextAreaElement>('farewell-note').value=farewellNote??'';el('farewell-note-error').textContent='';el('farewell-note-status').textContent=`${count(farewellNote??'')} / 120 字 · 可留白`;levelIndex=0;board=newBoard(levels[0]);history=[];future=[];motion=undefined;entered=0;queued=[];hintPoint=undefined;
   el('export-error').textContent='';el('export-status').textContent='';el('book-status').textContent='';el('sound-note').textContent='';
   el('app').dataset.reduced=String(reduced.checked);
@@ -423,7 +427,7 @@ function recordLevel(){
   if(won(levels[levelIndex],board)&&choiceOf(levels[levelIndex],board))journey.resolution=choiceOf(levels[levelIndex],board);
   if(board.found&&!journey.memories.includes(levelIndex))journey.memories.push(levelIndex);
 }
-el('skip').addEventListener('click',()=>{if(['playing','cleared','paused'].includes(state)){recordLevel();journey.skipped=journey.visited.length<levels.length;waiting();}});
+el('skip').addEventListener('click',()=>{if(['playing','cleared','paused'].includes(state)){recordLevel();journey.skipped=!reachedJourneyEnd(journey,levelIndex);waiting();}});
 el('next-level').addEventListener('click',()=>{
   if(state!=='cleared')return;recordLevel();openMemory(levelIndex,null);
 });
@@ -435,6 +439,7 @@ function showMemoryMode(mode:'story'|'relic'){
 }
 for(const button of document.querySelectorAll<HTMLButtonElement>('[data-memory-mode]'))button.addEventListener('click',()=>showMemoryMode(button.dataset.memoryMode as 'story'|'relic'));
 function memoryText(){
+  el('short-memory-guide').hidden=journey.itinerary!=='one'||memoryReturn!==null;
   const story=memoryStory(identity,memoryIndex,journey),lines=el('memory-text');
   el('memory-title').textContent=story.title;el('story-scene').textContent=story.scene;el('story-card').dataset.milestone=String(story.milestone);el('memory-source').textContent=story.source;
   lines.replaceChildren(...story.lines.map(line=>{const p=document.createElement('p');p.textContent=line;return p;}));
@@ -460,7 +465,7 @@ function openMemory(index:number,returnTo:typeof memoryReturn){
   el<HTMLInputElement>('next-step').value=journey.nextStep;el('next-step').removeAttribute('aria-invalid');el<HTMLDetailsElement>('future-note').open=false;el('next-step-error').textContent='';
   el<HTMLDetailsElement>('memory-write').open=false;el('memory-note-error').textContent='';
   el('memory-back').hidden=returnTo!==null;
-  el('memory-continue').textContent=returnTo?'合上这一页':index===levels.length-1?'去站台告别 →':index===5?'收好回忆，去告别 →':'带上这一页，继续走 →';
+  el('memory-continue').textContent=returnTo?'合上这一页':reachedJourneyEnd(journey,index)?'带上这一页，去站台 →':index===5?'收好回忆，去告别 →':'带上这一页，继续走 →';
   setState('memory');memoryText();draw();lastStamp=performance.now();raf=requestAnimationFrame(tick);
   el('project-label').scrollIntoView({block:'start',behavior:'instant'});el('memory-continue').focus({preventScroll:true});
 }
@@ -473,7 +478,7 @@ el('memory-continue').addEventListener('click',()=>{
     else{setState(backTo);draw();stage.focus({preventScroll:true});}
     return;
   }
-  if(levelIndex===levels.length-1){waiting();return;}
+  if(reachedJourneyEnd(journey,levelIndex)){waiting();return;}
   levelIndex++;board=newBoard(levels[levelIndex]);history=[];future=[];motion=undefined;pickupAt=undefined;pulses=[];selectedParcel=undefined;queued=[];hintPoint=undefined;entered=elapsed;
   setState('playing');el('game-status').textContent=levelIndex<5&&identity.milestones?.[levelIndex]?`伙伴：这是 ${identity.milestones[levelIndex].date} 的更新。`:levelIndex===5?'伙伴：值得记住的，也可以留在这一页。':'伙伴：送我到站台吧。';draw();stage.focus({preventScroll:true});
 });
@@ -637,7 +642,7 @@ async function generatePreview(){
     openImage.href=previewUrl;openImage.hidden=false;download.disabled=false;el('export-status').textContent='';
   }catch(e){if(sequence===exportSequence&&state==='done'){error('export-error',e);el('export-status').textContent='';el('retry-export').hidden=false;}}
 }
-function finish(){el('result-letter').hidden=!journey.farewellNote;el('result-letter-text').textContent=journey.farewellNote??'';showResultPage('ticket');renderProjectMedia(el('result-media'),identity);stopClock();dark=1;sound.stop();setState('done');draw();renderDossier(el('result-keywords'),identity);renderAlbum();el('result-name').textContent=identity.facts.name.value;el('journey-stats').textContent=`${journey.visited.length} / ${levels.length} 站 · ${journey.memories.length} 件旅途物件${journey.skipped?' · 提前到站':''}`;el('ending-choice').hidden=!journey.resolution;el('ending-choice').textContent=journey.resolution?resolutionText[journey.resolution]:'';void generatePreview();el('result-panel').scrollIntoView({block:'start',behavior:'instant'});el('replay').focus({preventScroll:true});}
+function finish(){el('result-letter').hidden=!journey.farewellNote;el('result-letter-text').textContent=journey.farewellNote??'';showResultPage('ticket');renderProjectMedia(el('result-media'),identity);stopClock();dark=1;sound.stop();setState('done');draw();renderDossier(el('result-keywords'),identity);renderAlbum();el('result-name').textContent=identity.facts.name.value;el('journey-stats').textContent=journeyStats(journey);el('ending-choice').hidden=!journey.resolution;el('ending-choice').textContent=journey.resolution?resolutionText[journey.resolution]:'';void generatePreview();el('result-panel').scrollIntoView({block:'start',behavior:'instant'});el('replay').focus({preventScroll:true});}
 function paintRitual(animate=false){
   cancelAnimationFrame(ritualRaf);const c=el<HTMLCanvasElement>('ritual-canvas').getContext('2d');if(!c)return;
   const began=performance.now();
