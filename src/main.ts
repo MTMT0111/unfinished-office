@@ -12,7 +12,7 @@ import { destination, destinationCaption, drawCity } from './destination.ts';
 import { readProjectPhoto, renderProjectMedia } from './project-media.ts';
 import { handoverMarkdown, relicFiles, relicRows, renderRelicDesk } from './relics.ts';
 import {drawRitual,ritualLights,ritualLines,sealRitual,unfinishedPage} from './ritual.ts';
-import {reachedJourneyEnd,journeyStats} from './game.ts';
+import {reachedJourneyEnd,journeyStats,explorationLine} from './game.ts';
 
 type State = 'input'|'reading'|'confirm'|'opening'|'playing'|'cleared'|'memory'|'paused'|'waiting'|'fading'|'done';
 const el = <T extends HTMLElement=HTMLElement>(id:string) => document.getElementById(id) as T;
@@ -93,11 +93,12 @@ function refreshGame(){
   el('solo-controls').hidden=coop;el('coop-controls').hidden=!coop;el<HTMLButtonElement>('hint').hidden=coop;
   el('control-help').textContent=coop?'两人同屏：玩家一用 WASD，玩家二用方向键，各自控制一个角色。Z 撤销，Y 重做。也可点角色后点相邻格，或在画面上滑动。你能推箱；幽灵能过水、走过灯芯点灯。金框放箱子，金色脚印给你，绿色脚印给幽灵。两人到齐、灯全亮才过关。书库的书架和行李格任选一个。':'方向键 / WASD 移动，X 换人，Z 撤销，Y 重做。也可点方向按钮、相邻格子，或在画面上滑动。你能推箱；幽灵能过水、走过灯芯点灯。金框放箱子，金色脚印给你，绿色脚印给幽灵。两人到齐、灯全亮才过关。书库的书架和行李格任选一个。';
   const memory=levelIndex<5?identity.milestones?.[levelIndex]:undefined;
-  el('chapter-number').textContent=memory?`${memory.date} · 日记页 ${String(levelIndex+1).padStart(2,'0')}`:level.subtitle;el('chapter-title').textContent=memory?memory.subject:level.title;
-  el('game-objective').textContent=memory?'把这次更新的文件送进金框，再和伙伴一起到出口。':levelIndex===5?`替「${farewells[identity.farewellIntent??'undecided'].page}」选个去处，再一起离开。`:levelIndex===6?'收好最后一件行李，点亮站灯，再一起到站。':level.hint;
+  el('chapter-number').textContent=memory?`${memory.date} · 日记页 ${String(levelIndex+1).padStart(2,'0')}`:`${String(levelIndex+1).padStart(2,'0')} / 夜路上的回声`;el('chapter-title').textContent=memory?memory.subject:level.title;
+  el('game-objective').textContent=explorationLine(levelIndex,board);
+  el('objective-help').textContent=memory?'把这次更新的文件送进金框，再和伙伴一起到出口。':level.hint;
   el('active-character').textContent=board.active==='you'?'你':'项目幽灵';
   el('switch-character').setAttribute('aria-label',`切换为${board.active==='you'?'项目幽灵':'你'}，快捷键 X`);
-  el('memory-indicator').textContent=(memory?memory.sha.slice(0,7):keepsakes[levelIndex].name)+(board.found?' · 已收好':' · 找找看');
+  el('memory-indicator').textContent=board.found?(memory?memory.sha.slice(0,7):keepsakes[levelIndex].name)+' · 已收好':'◇ 尚未辨认的微光';
   el<HTMLButtonElement>('undo').disabled=state==='paused'||!history.length;
   el<HTMLButtonElement>('redo').disabled=state==='paused'||!future.length;
   const targets=goals(level),required=positions(level,'r').length?1:targets.length,packed=targets.filter(p=>board.boxes.some(box=>same(box,p))).length;
@@ -362,16 +363,16 @@ function tick(now:number){
     const lines=openingJourney?[
       {at:1.3,text:`夜班灯亮了。「${identity.facts.name.value||'这个项目'}」带着最近的更新，回到事务所。`},
       {at:3.2,text:count?`桌上有 ${count} 次已选中的提交；没有取到的经过，就留白。`:'这份资料没有 Git 提交记录，我们不替它补写过去。'},
-      {at:5.5,text:journey.itinerary==='one'?'这一程只走雨后小径，翻看第一份项目线索，再去站台告别。':'前五站会翻看提交与项目线索；每一页都能打开原始依据。'},
-      {at:7.7,text:journey.itinerary==='one'?'你推好行李，再和伙伴一起走到各自的脚印。':'你搬运行李，伙伴穿过水道踩住机关，再替走过的路点灯。'},
-      {at:10,text:journey.itinerary==='one'?'到回忆桌，选一件真实文件，决定珍藏、交接还是暂存；也可以留白。':'到书库时，亲手决定想留下的那一页放在哪里。'},
+      {at:5.5,text:journey.itinerary==='one'?'今晚只走一段小径。路的尽头，有一班为你们停留的车。':'夜路深处，还留着一些没有熄灭的光。'},
+      {at:7.7,text:'伙伴提起行李，像是认出了某条很久以前的路。'},
+      {at:10,text:'那些没有说完的话，等走近了再听。'},
       {at:11.8,text:'最后一起到站。关掉灯，让伙伴带着这段同行启程。'},
     ]:[
       {at:1.6,text:'夜雨落在事务所的窗上，桌面还亮着一盏灯。'},
       {at:3.8,text:'门外有个项目伙伴，带着做过的事，也带着一起走过的日子。'},
       {at:6,text:'桌上先留出七站的位置；等你带来项目，再把真实资料放进日记。'},
-      {at:8.4,text:'路上要搬运行李、开一扇门，也要替同伴点亮两盏灯。'},
-      {at:10.8,text:'走到书库，你来决定纪念页的去处；最后再亲手关灯。'},
+      {at:8.4,text:'窗外有一道微光，一会儿亮，一会儿隐进树影。'},
+      {at:10.8,text:'先陪它走一段。怎样告别，可以慢慢想。'},
     ];
     el('opening-line').textContent=lines.filter(line=>elapsed>=line.at).at(-1)?.text??'夜班刚刚亮灯。';
     draw();if(elapsed>=(openingJourney?13.4:12.4)){completeOpening();return;}raf=requestAnimationFrame(tick);return;

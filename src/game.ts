@@ -72,6 +72,17 @@ export const reachedJourneyEnd=(journey:Journey,index:number)=>journey.visited.i
 export const journeyStats=(journey:Journey)=>`${journey.visited.length} / ${levels.length} 站 · ${journey.memories.length} 件旅途物件${journey.itinerary==='one'?' · 一站同行':''}${journey.skipped?' · 提前到站':''}`;
 export const newJourney=():Journey=>({visited:[],memories:[],steps:0,skipped:false,notes:{},resolution:null,nextStep:''});
 
+export function explorationLine(index:number,board:Board):string{
+  const theme=levels[index].theme;
+  if(theme==='river')return gateOpen(levels[index],board)?'水下传来一声轻响。对岸不再那么远了。':'水面没有留下它的倒影。桥那边，像有什么在等。';
+  if(theme==='garden')return board.lit.length?'玻璃后的叶子醒了一点。还有微光没有回应。':'玻璃上结着露。那些沉睡的灯，似乎认得你的伙伴。';
+  if(theme==='workshop')return board.lit.length?'停了很久的机器，重新有了呼吸。':'电线伸向墙后。两件行李，各自藏着一段未说完的话。';
+  if(theme==='library')return choiceOf(levels[index],board)?'这一页已有去处。剩下的空白，不必今晚写完。':'架上空着一个位置。窗边的行李，也没有合上。';
+  if(theme==='station')return board.lit.length?'远处响了一声汽笛。它没有催你。':'钟停在一个没有写完的时刻。站台仍为你留着灯。';
+  if(theme==='rooftop')return gateOpen(levels[index],board)?'那束光终于落到了另一边。':'城市已经睡了。只有对面那扇窗，还亮着。';
+  return board.found?'门后的微光亮了。它似乎一直记得你来过。':'没有路牌。石缝里的一点光，像一封还没拆的信。';
+}
+
 /** A short, bounded search powers one-step hints, including recovery after a bad push. */
 export async function solve(level:Level,start:Board):Promise<('switch'|Direction)[]|null>{
   // Work backwards from goals to discard box positions that no push can recover.

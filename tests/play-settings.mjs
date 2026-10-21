@@ -35,7 +35,7 @@ try{
     const route=await solve(level,newBoard(levels[i]));assert(route);let checkedLight=false;
     for(const action of route){
       const before=JSON.parse(await board());await page.keyboard.press(keys[action]);const after=JSON.parse(await board());
-      if(!checkedLight&&after.lit.length>before.lit.length){checkedLight=true;await page.keyboard.press('z');assert.deepEqual(JSON.parse(await board()).lit,before.lit);await page.keyboard.press('y');assert.deepEqual(JSON.parse(await board()),after);assert((await page.locator('#goal-lamps').innerText()).includes(String(after.lit.length)));if(i===2)await shot('journey-greenhouse-lit');}
+      if(!checkedLight&&after.lit.length>before.lit.length){checkedLight=true;await page.keyboard.press('z');assert.deepEqual(JSON.parse(await board()).lit,before.lit);await page.keyboard.press('y');assert.deepEqual(JSON.parse(await board()),after);assert((await page.locator('#goal-lamps').textContent()).includes(String(after.lit.length)));if(i===2)await shot('journey-greenhouse-lit');}
     }
     assert.equal(await state(),'cleared');if(i===2||i===4||i===6){assert(checkedLight);assert.equal(await page.locator('#goal-lamps').getAttribute('data-ready'),'true');}
     assert.equal(await page.locator('#goal-you').getAttribute('data-ready'),'true');assert.equal(await page.locator('#goal-ghost').getAttribute('data-ready'),'true');assert.equal(await page.locator('#goal-boxes').getAttribute('data-ready'),'true');

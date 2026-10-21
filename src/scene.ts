@@ -3,6 +3,7 @@ import type { GitMilestone, Identity } from './input.ts';
 import { keepsakeTopic } from './memory.ts';
 import { drawCity, drawFireworks } from './destination.ts';
 import { relicRows } from './relics.ts';
+import {drawLandmarks,drawAtmosphere} from './landscape.ts';
 
 export const WIDTH=384,HEIGHT=240,CELL=24,OX=84,OY=35;
 export const ease=(v:number)=>{const t=Math.max(0,Math.min(1,v));return t*t*(3-2*t);};
@@ -70,19 +71,21 @@ function background(c:CanvasRenderingContext2D,index:number){
     for(let i=0;i<4;i++){rect(c,325,60+i*9,37,2,'#657c79');rect(c,325,64+i*9,9+(i%2)*7,3,i%2?'#d0b87f':'#83ad9e');}
     rect(c,309,108,69,5,'#8c7470');rect(c,328,114,4,23,'#685a61');rect(c,357,114,4,23,'#685a61');
   }
-  // Raised island edge anchors the puzzle to the illustrated environment.
-  rect(c,OX+19,OY+29,178,130,'#182c33');rect(c,OX+22,OY+25,172,130,'#5b5b5b');
-  for(let y=1;y<6;y++)for(let x=1;x<8;x++){
+  const palette={forest:['#4b6159','#6b7b68'],river:['#4b6465','#6f8580'],garden:['#49635b','#708d72'],rooftop:['#555c70','#818595'],workshop:['#4b5b61','#78847e'],library:['#645d61','#918477'],station:['#605963','#8a7d83']}[theme];
+  for(let y=1;y<levels[index].map.length;y++)for(let x=1;x<8;x++){
+    if(/^#+$/.test(levels[index].map[y]))continue;
     const t=levels[index].map[y][x],px=OX+x*CELL,py=OY+y*CELL;
     if(t==='#'){
-      rect(c,px,py,CELL,CELL,'#344248');rect(c,px+2,py-5,20,24,'#505b5a');rect(c,px+4,py-5,17,3,'#738078');
-      rect(c,px+8,py+4,10,2,'#65706a');continue;
+      rect(c,px+1,py+2,23,25,'#192e37');rect(c,px+2,py-3,21,26,'#34494c');rect(c,px+3,py-3,19,4,palette[1]);
+      rect(c,px+6,py+6,10,1,'#536962');rect(c,px+14,py+10,1,8,'#213b40');continue;
     }
-    const floor=theme==='station'?'#665962':theme==='river'?'#536764':'#52685b';
-    if(t==='~'){rect(c,px,py,CELL,CELL,'#264e64');continue;}
-    rect(c,px,py,24,24,'#384c49');rect(c,px+1,py+1,22,21,floor);
-    rect(c,px+3,py+3,5,1,theme==='station'?'#85717a':'#71806b');
-    if((x+y)%3===0)rect(c,px+14,py+18,5,1,'#3b514e');
+    if(t==='~'){rect(c,px,py,CELL,CELL,'#213f55');rect(c,px,py,24,2,'#42616c');continue;}
+    rect(c,px,py,24,24,palette[0]);
+    rect(c,px+2,py+2,20,1,palette[1]);rect(c,px+23,py+3,1,18,'#394f52');
+    if((x+y)%3===0){rect(c,px+9,py+15,8,1,'#344b4e');rect(c,px+8,py+15,1,5,'#344b4e');}
+    if(tile(levels[index],{x,y:y+1})==='#'){rect(c,px,py+22,24,4,'#203840');rect(c,px+3,py+22,18,1,palette[1]);}
+    if(tile(levels[index],{x:x-1,y})==='#'){rect(c,px,py+3,2,18,'#82917b');rect(c,px-2,py+6,2,14,'#334e48');}
+    if(['forest','garden','river'].includes(theme)&&(x*7+y)%4===0){rect(c,px+3,py+17,6,2,'#749478');rect(c,px+5,py+15,2,2,'#749478');}
   }
   for(const [x,y] of [[73,177],[306,179]]){
     rect(c,x,y-32,3,33,'#7c7373');rect(c,x-4,y-38,11,9,'#d8b67e');rect(c,x-2,y-36,7,5,'#fae4a9');rect(c,x-5,y-40,13,2,'#4e4b5a');
@@ -160,8 +163,9 @@ export function drawScene(c:CanvasRenderingContext2D,id:Identity,board:Board,ind
   let bg=backgrounds.get(index);if(!bg){bg=document.createElement('canvas');bg.width=WIDTH;bg.height=HEIGHT;background(bg.getContext('2d')!,index);backgrounds.set(index,bg);}
   c.drawImage(bg,0,0);const clock=options.reduced?0:time;
   if(id.destination)drawCity(c,id.destination,clock,true);
+  drawLandmarks(c,level.theme);drawAtmosphere(c,level,board,clock);
   const r=(x:number,y:number,w:number,h:number,color:string)=>rect(c,x,y,w,h,color);
-  for(let y=1;y<6;y++)for(let x=1;x<8;x++){
+  for(let y=1;y<level.map.length;y++)for(let x=1;x<8;x++){
     const t=tile(level,{x,y}),px=OX+x*CELL,py=OY+y*CELL;
     if(t==='~'){for(let k=0;k<3;k++)r(px+3+(k*7+Math.floor(clock*4))%15,py+5+k*6,5,1,k%2?'#47768a':'#365f77');}
     if(t==='t'||t==='r'){
@@ -190,7 +194,11 @@ export function drawScene(c:CanvasRenderingContext2D,id:Identity,board:Board,ind
       const col=t==='e'?colors.gold:colors.mint;r(px+5,py+6,4,7,col);r(px+14,py+9,4,7,col);
       if(t==='o'){r(px+6,py+5,2,1,col);r(px+15,py+8,2,1,col);}
     }
-    if(t==='m'&&!board.found)drawKeepsake(c,index,px+12,py+10+Math.sin(clock*3)*2,1,keepsakeTopic(id,index).text);
+    if(t==='m'&&!board.found){
+      const near=[board.you,board.ghost].some(p=>Math.abs(p.x-x)+Math.abs(p.y-y)<=2);
+      if(near)drawKeepsake(c,index,px+12,py+10+Math.sin(clock*3)*2,1,keepsakeTopic(id,index).text);
+      else{c.save();c.globalAlpha=.6+Math.sin(clock*1.3)*.15;star(c,px+12,py+11,colors.mint,.45);c.restore();}
+    }
   }
   for(const p of options.guides??[])r(OX+p.x*CELL+10,OY+p.y*CELL+21,4,2,board.active==='you'?colors.gold:colors.mint);
   if(options.hint){const p=options.hint;c.strokeStyle=colors.cream;c.lineWidth=2;c.strokeRect(OX+p.x*CELL+2,OY+p.y*CELL+2,20,20);}
