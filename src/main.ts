@@ -12,6 +12,7 @@ import { destination, destinationCaption, drawCity } from './destination.ts';
 import { readProjectPhoto, renderProjectMedia } from './project-media.ts';
 import { handoverMarkdown, relicFiles, relicRows, renderRelicDesk } from './relics.ts';
 import {drawRitual,ritualLights,ritualLines,sealRitual,unfinishedPage} from './ritual.ts';
+import {nearEcho,projectEcho,echoRows,echoAt,drawEcho,drawEchoAtlas,type Echo} from './echo.ts';
 import {reachedJourneyEnd,journeyStats,explorationLine} from './game.ts';
 
 type State = 'input'|'reading'|'confirm'|'opening'|'playing'|'cleared'|'memory'|'paused'|'waiting'|'fading'|'done';
@@ -26,6 +27,8 @@ const image=el<HTMLImageElement>('memorial-preview'),download=el<HTMLButtonEleme
 const sound=new Sound();
 const ritualDialog=el<HTMLDialogElement>('farewell-ritual');
 let ritualStep=0,ritualRaf=0;
+const echoDialog=el<HTMLDialogElement>('echo-dialog');
+let echoDraft:Echo|undefined,echoRaf=0,echoReturn:HTMLElement|undefined;
 let state:State='input',identity=example('weather'),draft:Identity=identity;
 let journey=newJourney(),levelIndex=0,board=newBoard(levels[0]),history:Board[]=[],future:Board[]=[],motion:Motion|undefined,playMode:'solo'|'together'='solo';
 let legalSteps:Point[]=[],resumeAfterSettings=false;
@@ -88,6 +91,7 @@ function refreshGame(){
     stop.dataset.progress=complete?'complete':current?'current':'upcoming';
     stop.setAttribute('aria-current',current?'step':'false');
   });
+  refreshEchoes();
   const level=levels[levelIndex];
   const coop=playMode==='together';
   el('solo-controls').hidden=coop;el('coop-controls').hidden=!coop;el<HTMLButtonElement>('hint').hidden=coop;
@@ -145,6 +149,67 @@ function refreshGame(){
   stage.setAttribute('aria-label',`${level.title}。你在 ${coords(board.you)}，幽灵在 ${coords(board.ghost)}。${level.hint}`);
   el('board-description').textContent=`箱子：${board.boxes.map(coords).join('、')||'无'}。目标：${targets.map(coords).join('、')||'无'}。${positions(level,'r').length?'本关两个目标任选一个：左侧书架先收藏，右侧行李格带走。':''}灯芯：${lamps.map(coords).join('、')||'无'}，已亮 ${board.lit.length} 盏。机关：${positions(level,'s').map(coords).join('、')||'无'}。你的出口：${positions(level,'e').map(coords)}；幽灵出口：${positions(level,'o').map(coords)}。`;
 }
+function refreshEchoes(){
+  const nearby=nearEcho(levels[levelIndex],board),saved=journey.echoes?.[levelIndex];
+  const button=el<HTMLButtonElement>('listen-echo');
+  button.hidden=!nearby;button.disabled=!['playing','cleared'].includes(state);
+  button.textContent=saved?'✦ 再听这段回声 · E':'◇ 听一听微光 · E';
+  const rows=echoRows(journey);
+  el('echo-atlas').hidden=!['waiting','done'].includes(state)||!rows.length;
+  el('echo-tab').hidden=!rows.length;
+  const key=rows.map(row=>row.index).join(',');
+  for(const name of ['echo-stars','result-echo-stars']){
+    const stars=el(name);
+    if(stars.dataset.stars!==key){
+      stars.dataset.stars=key;stars.replaceChildren();
+      for(const row of rows){const star=document.createElement('button');star.type='button';star.textContent=`✦ ${String(row.index+1).padStart(2,'0')} · ${row.title}`;star.addEventListener('click',()=>openEcho(row.index));stars.append(star);}
+    }
+  }
+  if(state==='done'){const canvas=el<HTMLCanvasElement>('echo-atlas-canvas'),c=canvas.getContext('2d');if(c)drawEchoAtlas(c,journey);canvas.setAttribute('aria-label',`回声星图，${rows.length} 颗亲手收下的星。也可用下方按钮回看。`);}
+}
+function paintEcho(animate=false){
+  cancelAnimationFrame(echoRaf);const c=el<HTMLCanvasElement>('echo-canvas').getContext('2d');if(!c||!echoDraft)return;
+  const began=performance.now(),saved=Boolean(journey.echoes?.[echoDraft.index]);
+  const frame=(now:number)=>{
+    if(!echoDialog.open||!echoDraft)return;
+    const p=saved?(animate&&!reduced.checked&&!document.hidden?Math.min(1,(now-began)/1600):1):0;
+    drawEcho(c,echoDraft,p);if(saved&&p<1)echoRaf=requestAnimationFrame(frame);
+  };
+  frame(began);
+}
+function openEcho(index:number){
+  if(echoDialog.open||leaving||!['playing','cleared','waiting','done'].includes(state))return;
+  const saved=journey.echoes?.[index];
+  if(!saved&&(index!==levelIndex||!['playing','cleared'].includes(state)||!nearEcho(levels[index],board)))return;
+  echoDraft=saved??projectEcho(identity,index,journey);echoReturn=document.activeElement as HTMLElement;
+  el('echo-close').textContent=state==='done'?'回到星图':state==='waiting'?'回到站台':'回到旅程';
+  stopClock();sound.stop();queued=[];
+  el('echo-title').textContent=echoDraft.title;el('echo-text').textContent=echoDraft.text;el('echo-source').textContent=echoDraft.source;
+  const original=el<HTMLAnchorElement>('echo-original');original.hidden=!echoDraft.url;if(echoDraft.url)original.href=echoDraft.url;else original.removeAttribute('href');
+  el('echo-keep').hidden=Boolean(saved);el('echo-status').textContent=saved?'这段回声已在夜空。撤销脚步不会把它遗忘。':'可以收下，也可以只听一会儿。';
+  echoDialog.showModal();paintEcho();el('echo-title').focus();
+}
+el('listen-echo').addEventListener('click',()=>openEcho(levelIndex));
+el('echo-keep').addEventListener('click',()=>{
+  if(!echoDialog.open||!echoDraft||journey.echoes?.[echoDraft.index])return;
+  journey.echoes={...journey.echoes,[echoDraft.index]:structuredClone(echoDraft)};
+  el('echo-keep').hidden=true;el('echo-status').textContent='收好了。到站时，抬头就能找到它；回忆册也会保存这段原文。';
+  sound.found();refreshEchoes();paintEcho(true);el('echo-close').focus();
+});
+el('echo-close').addEventListener('click',()=>echoDialog.close());
+echoDialog.addEventListener('close',()=>{
+  cancelAnimationFrame(echoRaf);echoDraft=undefined;draw();
+  if(!document.hidden&&['playing','cleared'].includes(state)){lastStamp=performance.now();raf=requestAnimationFrame(tick);}
+  else if(state==='waiting')animateWaiting();
+  if(echoReturn?.isConnected)echoReturn.focus({preventScroll:true});
+});
+document.addEventListener('visibilitychange',()=>{if(echoDialog.open)paintEcho();});
+el('echo-atlas-canvas').addEventListener('click',event=>{
+  if(state!=='done')return;
+  const canvas=el('echo-atlas-canvas'),bounds=canvas.getBoundingClientRect();
+  const echo=echoAt(journey,(event.clientX-bounds.left)/bounds.width*384,(event.clientY-bounds.top)/bounds.height*120);
+  if(echo)openEcho(echo.index);
+});
 function setState(next:State){
   state=next;el('app').dataset.state=next;
   if(['input','reading'].includes(next))animateCover();else stopCover();
@@ -216,7 +281,7 @@ function showPreflight(page:string){
 for(const button of document.querySelectorAll<HTMLButtonElement>('[data-preflight]'))button.addEventListener('click',()=>showPreflight(button.dataset.preflight!));
 el('preflight-next').addEventListener('click',()=>showPreflight(preflightPage==='project'?'heart':'scene'));
 function showResultPage(page:string){
-  for(const name of ['ticket','memories','project','ritual'])el('result-'+name).hidden=name!==page;
+  for(const name of ['ticket','memories','project','ritual','echoes'])el('result-'+name).hidden=name!==page;
   for(const button of document.querySelectorAll<HTMLButtonElement>('[data-result-page]')){if(button.dataset.resultPage===page)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');}
   if(page==='memories')el<HTMLDetailsElement>('album-section').open=true;
 }
@@ -353,7 +418,7 @@ function waiting(){
   stopClock();sound.stop();queued=[];setState('waiting');draw();animateWaiting();el('begin-ritual').focus({preventScroll:true});
 }
 function animateWaiting(){
-  stopClock();if(!reduced.checked&&!document.hidden&&!settings.open&&!ritualDialog.open&&!leaving){lastStamp=performance.now();raf=requestAnimationFrame(tick);}
+  stopClock();if(!reduced.checked&&!document.hidden&&!settings.open&&!ritualDialog.open&&!echoDialog.open&&!leaving){lastStamp=performance.now();raf=requestAnimationFrame(tick);}
 }
 function tick(now:number){
   if(!['opening','playing','cleared','memory','waiting'].includes(state))return;
@@ -541,7 +606,7 @@ const bagButtons=keepsakes.map((_,i)=>{
   el('bag-items').append(button);return button;
 });
 function takeMove(direction:Direction,requestedActor:Actor=board.active){
-  if(state!=='playing'||leaving)return;
+  if(state!=='playing'||leaving||echoDialog.open)return;
   const actor=playMode==='together'?requestedActor:board.active;
   if(motion&&!reduced.checked&&elapsed-motion.at<.16){queueAction(actor,direction);return;}
   const from=board;if(board.active!==actor)board={...board,active:actor};
@@ -596,9 +661,9 @@ el('hint').addEventListener('click',async()=>{
 });
 for(const button of document.querySelectorAll<HTMLButtonElement>('[data-move]'))button.addEventListener('click',()=>takeMove(button.dataset.move as Direction,playMode==='together'?button.dataset.player as Actor:board.active));
 document.addEventListener('keydown',event=>{
-  if(settings.open||!['playing','cleared'].includes(state)||leaving||event.ctrlKey||event.metaKey||event.altKey||/INPUT|TEXTAREA|SELECT/.test((event.target as HTMLElement).tagName))return;
+  if(settings.open||echoDialog.open||!['playing','cleared'].includes(state)||leaving||event.ctrlKey||event.metaKey||event.altKey||/INPUT|TEXTAREA|SELECT/.test((event.target as HTMLElement).tagName))return;
   const key=event.key.toLowerCase(),dir=({arrowup:'up',w:'up',arrowdown:'down',s:'down',arrowleft:'left',a:'left',arrowright:'right',d:'right'} as Record<string,Direction>)[key];
-  if(dir){event.preventDefault();takeMove(dir,playMode==='together'?('wasd'.includes(key)?'you':'ghost'):board.active);}else if(key==='x'){event.preventDefault();if(!event.repeat)switchCharacter();}else if(key==='y'||key==='z'&&event.shiftKey){event.preventDefault();redo();}else if(key==='z'){event.preventDefault();undo();}else if(key==='escape'){event.preventDefault();pause();}
+  if(dir){event.preventDefault();takeMove(dir,playMode==='together'?('wasd'.includes(key)?'you':'ghost'):board.active);}else if(key==='e'){event.preventDefault();if(!event.repeat)openEcho(levelIndex);}else if(key==='x'){event.preventDefault();if(!event.repeat)switchCharacter();}else if(key==='y'||key==='z'&&event.shiftKey){event.preventDefault();redo();}else if(key==='z'){event.preventDefault();undo();}else if(key==='escape'){event.preventDefault();pause();}
 });
 let pointer:{x:number;y:number}|null=null;
 stage.addEventListener('pointerdown',event=>{if(state!=='playing')return;pointer={x:event.clientX,y:event.clientY};stage.setPointerCapture(event.pointerId);});
@@ -618,6 +683,7 @@ stage.addEventListener('click',event=>{
   if(!['waiting','done'].includes(state)||leaving)return;
   const bounds=stage.getBoundingClientRect();if(!bounds.width||!bounds.height)return;
   const x=(event.clientX-bounds.left)/bounds.width*WIDTH,y=(event.clientY-bounds.top)/bounds.height*HEIGHT;
+  const echo=echoAt(journey,x,y);if(echo){openEcho(echo.index);return;}
   const col=Math.round((x-256)/13.5),row=Math.round((y-149)/16),index=row*4+col;
   if(col>=0&&col<4&&row>=0&&row<2&&Math.abs(x-(256+col*13.5))<=6&&Math.abs(y-(149+row*16))<=7&&journey.memories.includes(index)&&journey.visited.includes(index)){
     showStationStory(index);return;

@@ -3,6 +3,7 @@ import type { GitMilestone, Identity } from './input.ts';
 import { keepsakeTopic } from './memory.ts';
 import { drawCity, drawFireworks } from './destination.ts';
 import { relicRows } from './relics.ts';
+import {drawConstellation} from './echo.ts';
 import {drawLandmarks,drawAtmosphere} from './landscape.ts';
 
 export const WIDTH=384,HEIGHT=240,CELL=24,OX=84,OY=35;
@@ -373,6 +374,7 @@ export function drawFarewell(c:CanvasRenderingContext2D,id:Identity,time:number,
       c.restore();
     }
   }
+  if(journey)drawConstellation(c,journey,cinematic?ease((film-.64)/.32):1);
   for(const ripple of ripples){
     const age=rippleTime-ripple.at;if(age<0||age>.95)continue;
     c.save();

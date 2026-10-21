@@ -1,3 +1,4 @@
+import type { Echo } from './echo.ts';
 import type { Ritual } from './ritual.ts';
 export type Point = { x:number; y:number };
 export type Actor = 'you'|'ghost';
@@ -67,7 +68,7 @@ export function move(level:Level,b:Board,direction:Direction):Board|null{
   next.latched ||= tile(level,next.you)==='e';
   return next;
 }
-export type Journey = { visited:number[]; memories:number[]; steps:number; skipped:boolean; notes:Record<number,string>; resolution:'shelf'|'carry'|null; nextStep:string; bookmark?:number; citySecret?:boolean; farewellNote?:string; relics?:Record<number,{path:string;place:'keep'|'pass'|'rest'}>; ritual?:Ritual; itinerary?:'full'|'one' };
+export type Journey = { echoes?:Record<number,Echo>; visited:number[]; memories:number[]; steps:number; skipped:boolean; notes:Record<number,string>; resolution:'shelf'|'carry'|null; nextStep:string; bookmark?:number; citySecret?:boolean; farewellNote?:string; relics?:Record<number,{path:string;place:'keep'|'pass'|'rest'}>; ritual?:Ritual; itinerary?:'full'|'one' };
 export const reachedJourneyEnd=(journey:Journey,index:number)=>journey.visited.includes(index)&&index===(journey.itinerary==='one'?0:levels.length-1);
 export const journeyStats=(journey:Journey)=>`${journey.visited.length} / ${levels.length} 站 · ${journey.memories.length} 件旅途物件${journey.itinerary==='one'?' · 一站同行':''}${journey.skipped?' · 提前到站':''}`;
 export const newJourney=():Journey=>({visited:[],memories:[],steps:0,skipped:false,notes:{},resolution:null,nextStep:''});

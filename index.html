@@ -51,7 +51,8 @@
         <div id="choice-legend" class="choice-legend" hidden><span id="choice-shelf">▤ 留在书架</span><span id="choice-carry">▣ 带向下一站</span></div>
         </details><div class="game-caption"><p id="game-objective"></p><p id="game-status" role="status" aria-live="polite"></p></div>
         <div class="play-controls"><div id="solo-controls" class="solo-controls"><button id="switch-character" type="button"><span class="control-dot" aria-hidden="true">◆</span><span id="active-character">你</span><kbd>X</kbd><span class="hint">换人</span></button><div class="dpad" role="group" aria-label="你的方向控制"><button data-move="up" data-player="you" type="button" aria-label="向上">↑</button><button data-move="left" data-player="you" type="button" aria-label="向左">←</button><button data-move="down" data-player="you" type="button" aria-label="向下">↓</button><button data-move="right" data-player="you" type="button" aria-label="向右">→</button></div></div><div id="coop-controls" class="coop-controls" hidden><section class="coop-pad"><span class="eyebrow">你 · WASD</span><div class="dpad" role="group" aria-label="玩家一方向控制"><button data-move="up" data-player="you" type="button" aria-label="玩家一向上">↑</button><button data-move="left" data-player="you" type="button" aria-label="玩家一向左">←</button><button data-move="down" data-player="you" type="button" aria-label="玩家一向下">↓</button><button data-move="right" data-player="you" type="button" aria-label="玩家一向右">→</button></div></section><section class="coop-pad"><span class="eyebrow">伙伴 · 方向键</span><div class="dpad" role="group" aria-label="玩家二方向控制"><button data-move="up" data-player="ghost" type="button" aria-label="玩家二向上">↑</button><button data-move="left" data-player="ghost" type="button" aria-label="玩家二向左">←</button><button data-move="down" data-player="ghost" type="button" aria-label="玩家二向下">↓</button><button data-move="right" data-player="ghost" type="button" aria-label="玩家二向右">→</button></div></section></div><div class="tools"><button id="undo" type="button" aria-label="撤销一步，快捷键 Z">↶ 撤销</button><button id="redo" type="button" aria-label="重做一步，快捷键 Y">↷ 重做</button><button id="hint" type="button">请伙伴指路</button><button id="restart-level" class="quiet" type="button">重来</button></div></div>
-        <details class="game-help"><summary>问问伙伴 / 操作说明</summary><p id="control-help">方向键 / WASD 移动，X 换人，Z 撤销，Y 重做。也可点方向按钮、相邻格子，或在画面上滑动。你能推箱；幽灵能过水、走过灯芯点灯。金框放箱子，金色脚印给你，绿色脚印给幽灵。两人到齐、灯全亮才过关。书库的书架和行李格任选一个。</p><p>圆形机关打开桥；你走到出口后桥会保持打开。点行李标签，可以找到对应的箱子。每站的小物件会收进同行的小箱；过关后能再翻那一段回忆，没有计时和失败惩罚。</p><p id="board-description"></p></details>
+        <div class="echo-listen"><button id="listen-echo" type="button" hidden>◇ 听一听微光 <kbd>E</kbd></button></div>
+        <details class="game-help"><summary>问问伙伴 / 操作说明</summary><p id="control-help">方向键 / WASD 移动，X 换人，Z 撤销，Y 重做。也可点方向按钮、相邻格子，或在画面上滑动。你能推箱；幽灵能过水、走过灯芯点灯。金框放箱子，金色脚印给你，绿色脚印给幽灵。两人到齐、灯全亮才过关。书库的书架和行李格任选一个。</p><p>圆形机关打开桥；你走到出口后桥会保持打开。点行李标签，可以找到对应的箱子。每站的小物件会收进同行的小箱；过关后能再翻那一段回忆，没有计时和失败惩罚。</p><p>走近微光时，可以按 E 或点「听一听微光」。收下的回声会在站台成为一颗星；不必集齐，也不影响通关。</p><p id="board-description"></p></details>
       </div>
       <nav id="journey-bag" class="journey-bag" aria-label="旅程物件，翻看已走过的故事" hidden><span id="bag-heading">更新 · 去处 · 告别</span><div id="bag-items"></div></nav>
       <p id="sound-note" class="note" role="status"></p>
@@ -63,6 +64,7 @@
       <div id="leave-prompt" class="inline-prompt" hidden><p>返回项目页？本次关卡进度会重置。</p><div class="actions"><button id="keep-show" type="button">继续旅程</button><button id="leave-show" class="quiet" type="button">返回</button></div></div>
       <section id="departure-panel" class="departure-panel" hidden aria-label="到站后的告别"><p id="departure-memory"></p><p id="departure-choice" class="note"></p><p id="departure-voice" class="departure-voice" role="status"></p><div id="ceremony-controls" hidden><p id="ceremony-chapter" class="eyebrow"></p><progress id="ceremony-progress" max="1" value="0" aria-label="告别动画进度"></progress><button id="skip-ceremony" type="button" class="quiet">收好这一幕 →</button></div><article id="station-story" class="station-story" hidden aria-live="polite"><p id="station-story-topic" class="eyebrow"></p><h2 id="station-story-title"></h2><div id="station-story-lines"></div><small id="station-story-source"></small><button id="station-open-diary" type="button" class="quiet">翻开完整日记 →</button></article></section>
       <div id="station-intent-panel" class="farewell-card station-intent" hidden><label for="station-intent">到了站台，也可以换一种心意</label><select id="station-intent" aria-describedby="station-intent-note"></select><p id="station-intent-note" class="note" aria-live="polite"></p><details class="station-letter"><summary>留一封短信给它 <small>可留白 · 随纪念保存</small></summary><label for="farewell-note">走了这么久，最后想对它说什么？</label><textarea id="farewell-note" rows="3" aria-describedby="farewell-note-status" placeholder="谢谢你陪我走过这些年。"></textarea><p id="farewell-note-status" class="note" role="status">0 / 120 字 · 写下后会随这次旅程保留</p><button id="use-project-note" type="button" class="quiet">带上出发前写的心意</button><p id="farewell-note-error" class="error" role="alert"></p></details><small>关灯只是结束这次同行。想多坐一会儿，就先留在这里。</small></div>
+      <details id="echo-atlas" class="echo-atlas" hidden><summary>抬头，看看我们留下的星光</summary><p class="note">每颗星，都是途中亲手收下的一段回声。点星星或下面的名字，再听一次。</p><div id="echo-stars" class="echo-stars"></div></details>
       <div id="lamp-controls" class="actions" hidden><button id="begin-ritual" class="primary" type="button">亲手完成这场告别</button><button id="lamp" type="button">关灯，今天先到这里</button></div>
     </section>
 
@@ -114,7 +116,7 @@
     </section>
 
     <section id="result-panel" class="result" aria-labelledby="result-title" hidden>
-      <nav class="page-tabs" aria-label="旅程纪念"><button type="button" data-result-page="ticket" aria-current="page">纪念票</button><button type="button" data-result-page="memories">回忆册</button><button type="button" data-result-page="project">项目原件</button><button id="ritual-tab" type="button" data-result-page="ritual" hidden>告别记</button></nav>
+      <nav class="page-tabs" aria-label="旅程纪念"><button type="button" data-result-page="ticket" aria-current="page">纪念票</button><button type="button" data-result-page="memories">回忆册</button><button type="button" data-result-page="project">项目原件</button><button id="echo-tab" type="button" data-result-page="echoes" hidden>回声星图</button><button id="ritual-tab" type="button" data-result-page="ritual" hidden>告别记</button></nav>
       <span class="eyebrow">同行纪念票</span><h2 id="result-title">今天先到这里</h2><p id="result-name"></p><p id="result-intent" class="note"></p><p id="journey-stats" class="note"></p>
       <div id="result-ticket" class="result-page"><img id="memorial-preview" alt="你和项目幽灵在夜间站台的告别纪念票" hidden>
       <aside id="result-letter" class="farewell-letter" hidden><small>你留给项目的短信</small><p id="result-letter-text"></p></aside><p id="ending-choice" class="ending-choice" hidden></p>
@@ -122,6 +124,7 @@
       <div id="ending-step" class="future-note ending-step" hidden><small>带给下一程的一句话</small><p id="ending-step-text"></p></div>
       <div class="date-row"><label class="check"><input id="include-date" type="checkbox">写下这次告别的日期</label><label id="date-label" for="memorial-date" hidden>保留日期<input id="memorial-date" type="date" aria-label="纪念图日期"></label></div>
       </div>
+      <section id="result-echoes" class="result-page" hidden><p class="eyebrow">没有白走的夜路</p><h3>那些字，后来成了星光</h3><canvas id="echo-atlas-canvas" width="384" height="120" role="img" aria-label="回声星图，下方按钮可回看原文"></canvas><p class="note">点一颗星，再听一次。这里只留你亲手收下的片段；没有集齐，也是一片属于你的夜空。</p><div id="result-echo-stars" class="echo-stars"></div></section>
       <section id="result-ritual" class="result-page ritual-receipt" hidden><p class="eyebrow">烂尾事务所 · 亲手封存</p><h3>这一程，郑重收好</h3><div id="ritual-receipt"></div><p class="note">这是你的告别记录，不是项目完工证明。<br>保存纪念票或回忆册，也会保存这份落款。</p></section>
       <section id="result-project" class="result-page" hidden><h3>项目仍在这里</h3><div id="result-media"></div><details class="result-dossier"><summary>项目档案 / 更新日记</summary><div id="result-keywords" class="keyword-grid"></div></details></section>
       <section id="result-memories" class="result-page" hidden><div id="relic-collection" class="relic-collection" hidden></div><p id="album-empty" class="note">这次没有翻开的回忆，可以下一次再看。</p><details id="album-section" class="result-dossier" tabindex="-1" hidden open><summary>翻翻这一路的回忆</summary><div id="memory-album"></div></details></section>
@@ -132,6 +135,13 @@
     </section>
     <footer><span>一段小小的同行</span></footer>
   </main>
+  <dialog id="echo-dialog" class="settings-dialog ritual-dialog echo-dialog" aria-labelledby="echo-title">
+    <div class="settings-heading"><p class="eyebrow">夜路拾音 · 回声星图</p><button id="echo-close" class="quiet" type="button">回到旅程</button></div>
+    <h2 id="echo-title" tabindex="-1"></h2>
+    <canvas id="echo-canvas" width="384" height="180" aria-label="项目纸页化为光点，汇入夜空中的一颗星"></canvas>
+    <pre id="echo-text"></pre><small id="echo-source"></small><a id="echo-original" target="_blank" rel="noopener noreferrer" hidden>查看原始提交 ↗</a>
+    <p id="echo-status" class="note" role="status"></p><div class="actions"><button id="echo-keep" class="primary" type="button">把这段回声留在夜空</button></div>
+  </dialog>
   <dialog id="farewell-ritual" class="settings-dialog ritual-dialog" aria-labelledby="ritual-title">
     <div class="settings-heading"><p id="ritual-progress" class="eyebrow" aria-live="polite"></p><button id="ritual-close" class="quiet" type="button">先回站台</button></div>
     <h2 id="ritual-title" tabindex="-1"></h2>
